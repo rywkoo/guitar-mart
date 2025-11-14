@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Test Add Product</title>
+<style>
+body { font-family: Arial; padding:20px; background:#f8f9fa; }
+form { background:#fff; padding:20px; border-radius:10px; max-width:400px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+input, button { width:100%; padding:10px; margin:10px 0; border-radius:5px; }
+button { background:#007bff; color:#fff; border:none; cursor:pointer; }
+button:hover { background:#0056b3; }
+#response { white-space:pre-wrap; background:#fff; padding:10px; border-radius:5px; margin-top:10px; max-width:400px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.05); }
+</style>
+</head>
+<body>
+
+<h1 style="text-align:center;">Add Product Test Page</h1>
+
+<form id="productForm" enctype="multipart/form-data">
+  <input type="text" name="name" placeholder="Product Name" required>
+  <input type="number" name="price" step="0.01" placeholder="Price" required>
+  <input type="number" name="stock" placeholder="Stock" required>
+  <input type="number" name="category_id" placeholder="Category ID" required>
+  <input type="file" name="image">
+  <button type="submit">Add Product</button>
+</form>
+
+<div id="response"></div>
+
+<script>
+const form = document.getElementById('productForm');
+const responseDiv = document.getElementById('response');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const token = localStorage.getItem('jwtToken');
+  if (!token) {
+    alert("You must log in first to get a JWT token!");
+    return;
+  }
+
+  const formData = new FormData(form);
+
+  try {
+    const res = await fetch('/api/products/', {
+      method: 'POST',
+      headers: {
+        "Authorization": "Bearer " + token
+      },
+      body: formData
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      responseDiv.textContent = "✅ Product added successfully:\n" + JSON.stringify(data, null, 2);
+    } else {
+      responseDiv.textContent = "❌ Error:\n" + JSON.stringify(data, null, 2);
+    }
+  } catch (err) {
+    responseDiv.textContent = "❌ Error: " + err.message;
+  }
+});
+</script>
+
+</body>
+</html>

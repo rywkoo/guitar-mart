@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Menu Navbar (Definitive Final Version)</title>
+    <style>
+        /*
+        ========================================
+        CSS Custom Properties (Base Theme)
+        ========================================
+        */
+        :root {
+            --color-background: #ffffff;
+            --color-surface: #f8f9fa; /* For menu background */
+            --color-text-primary: #212529;
+            --color-text-secondary: #495057;
+            --color-primary: #0056b3;
+            --color-border: #e9ecef;
+            --font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-weight-bold: 600;
+            --navbar-height: 80px;
+            --navbar-padding: 1.5rem;
+            --container-width: 100%;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; font-family: var(--font-family-sans-serif); line-height: 1.6; }
+        .content { height: 200vh; max-width: var(--container-width); margin: 0 auto; padding: 20px var(--navbar-padding); }
+        ul { list-style: none; margin: 0; padding: 0; }
+        a { text-decoration: none; color: var(--color-text-secondary); transition: color var(--transition-speed) ease; }
+        a:hover, a:focus { color: var(--color-primary); }
+
+        .navbar { position: sticky; top: 0; z-index: 1000; height: var(--navbar-height); display: flex; align-items: center; background-color: var(--color-background); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .navbar__container { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: var(--container-width); margin: 0 auto; padding: 0 var(--navbar-padding); }
+        .navbar__brand { font-size: 1.75rem; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+        .navbar__toggle { display: block; border: 1px solid var(--color-border); border-radius: 4px; padding: 0.25rem 0.75rem; background: transparent; cursor: pointer; }
+        .navbar__toggle .bar { display: block; width: 22px; height: 2px; margin: 6px 0; background-color: var(--color-text-primary); transition: transform var(--transition-speed) ease; }
+        .navbar__toggle.is-active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .navbar__toggle.is-active .bar:nth-child(2) { opacity: 0; }
+        .navbar__toggle.is-active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+        
+        .navbar__menu { display: none; }
+        .navbar__menu.is-active { display: block; position: absolute; top: var(--navbar-height); left: 0; width: 100%; background-color: var(--color-background); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        
+        .navbar__item > .navbar__link { display: flex; align-items: center; padding: 1.25rem var(--navbar-padding); font-weight: var(--font-weight-bold); }
+        .navbar__item:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+        
+        :is(.navbar__toggle, .navbar__link):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        
+        /* Mobile Accordion Styles */
+        .mega-menu-toggle { justify-content: space-between; width: 100%; }
+        .mega-menu-toggle::after { content: 'â€º'; font-size: 1.5em; transform: rotate(90deg); transition: transform var(--transition-speed) ease; }
+        .mega-menu-item.is-active > .mega-menu-toggle::after { transform: rotate(-90deg); }
+        .mega-menu { max-height: 0; overflow: hidden; background-color: var(--color-surface); transition: max-height var(--transition-speed) ease-in-out; }
+        .mega-menu-item.is-active > .mega-menu { max-height: 1000px; }
+        .mega-menu__list { padding: 0.5rem var(--navbar-padding); }
+        .mega-menu__list li a { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: var(--border-radius); }
+        .mega-menu__list li a:hover { background-color: #e9ecef; }
+        .mega-menu__list .icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-primary); }
+        .mega-menu__heading { display: none; }
+        .mega-menu__feature { display: none; }
+        
+        @media (min-width: 992px) {
+            .navbar__toggle { display: none; }
+            .navbar__menu { display: flex; align-items: center; position: static; width: auto; background: none; box-shadow: none; }
+            .navbar__list { display: flex; align-items: center; gap: 0.5rem; }
+            .navbar__item, .navbar__item:not(:last-child) { border: none; }
+            .navbar__item > .navbar__link { padding: 0.5rem 1rem; }
+            .mega-menu-toggle::after { content: '\25BE'; margin-left: 0.5em; transform: rotate(0); }
+            
+            /* --- The Definitive Positioning Fix --- */
+            .mega-menu-item {
+                /* FIX #1: Make the parent LI static on desktop. */
+                /* This forces the child .mega-menu to anchor to the full-width .navbar. */
+                position: static;
+            }
+            .mega-menu {
+                /* FIX #2: Position the menu relative to the full viewport/navbar. */
+                display: block; position: absolute;
+                top: calc(var(--navbar-height) - 5px); /* Appears just below the navbar */
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90vw; max-width: 900px;
+                background-color: var(--color-background); border: 1px solid var(--color-border);
+                border-radius: var(--border-radius); box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                opacity: 0; visibility: hidden;
+                transition: opacity var(--transition-speed) ease, visibility var(--transition-speed) ease;
+                max-height: none;
+            }
+            .mega-menu-item:hover > .mega-menu, .mega-menu-item:focus-within > .mega-menu { opacity: 1; visibility: visible; }
+            /* --- End of Fix --- */
+            
+            .mega-menu__content { padding: 1.5rem; }
+            .mega-menu__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+            .mega-menu__list { padding: 0; }
+            .mega-menu__heading { display: block; font-size: 0.9rem; font-weight: var(--font-weight-bold); text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 1rem; padding: 0 0.75rem; }
+            .mega-menu__feature { display: block; border-radius: var(--border-radius); overflow: hidden; }
+            .mega-menu__feature img { display: block; width: 100%; height: auto; }
+            .mega-menu__feature-content { padding: 1rem; background-color: var(--color-surface); }
+            .mega-menu__feature-content h4 { margin: 0 0 0.5rem; }
+            .mega-menu__feature-content p { font-size: 0.9rem; margin: 0 0 1rem; }
+            .mega-menu__cta { display: inline-block; padding: 0.5rem 1rem; background-color: var(--color-primary); color: #fff; font-weight: var(--font-weight-bold); border-radius: var(--border-radius); }
+        }
+
+            :root {
+        --cta-bg: #f0f2f5;
+        --cta-heading-color: #1c1e21;
+        --cta-link-color: #007bff;
+        --cta-link-hover-color: #0056b3;
+
+        --footer-bg: #1c1e21;
+        --footer-text: #adb5bd;
+        --footer-link-hover: #ffffff;
+    }
+
+    /* Basic body styles */
+
+
+:root {
+            --footer-bg: #222529;
+            --footer-text: #adb5bd;
+            --footer-heading: #ffffff;
+            --footer-link-hover: #ffffff;
+            --footer-border: #3b3f44;
+        }
+
+        /* Basic body styles */
+
+        
+        main {
+            flex-grow: 1;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1140px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .main-content {
+            padding: 2rem 0;
+            background-color: #ffffff; /* Page content needs a background */
+        }
+        
+        .main-content-wrapper {
+             background-color: #ffffff; /* Set this to your main page background color */
+        }
+
+        /* FOOTER STYLES START HERE */
+        
+        /* The SVG divider itself */
+        .footer-divider {
+            line-height: 0; /* Removes any extra space around the SVG */
+            background-color: #ffffff; /* Match the content background above it */
+        }
+        .footer-divider svg {
+            display: block;
+            width: 100%;
+            height: 80px; /* Adjust height of the wave */
+            fill: var(--footer-bg);
+        }
+
+        .footer-wave {
+            background-color: var(--footer-bg);
+            color: var(--footer-text);
+            padding: 2rem 0 3rem 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-top: -1px; /* Overlap slightly to prevent rendering gaps */
+        }
+        
+        .footer-wave__main-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Mobile-first */
+            gap: 2.5rem;
+        }
+
+        .footer-wave__heading {
+            color: var(--footer-heading);
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+        }
+        
+        .footer-wave__links ul { margin: 0; padding: 0; list-style: none; }
+        .footer-wave__links li:not(:last-child) { margin-bottom: 0.75rem; }
+        .footer-wave__links a { color: var(--footer-text); text-decoration: none; transition: color 0.2s; }
+        .footer-wave__links a:hover { color: var(--footer-link-hover); }
+
+        .footer-wave__bottom {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--footer-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            text-align: center;
+        }
+        .footer-wave__copyright { font-size: 0.875em; }
+
+        @media (min-width: 600px) {
+            .footer-wave__main-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .footer-wave__main-grid {
+                grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            }
+            .footer-wave__bottom {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+    /* === Team Member Card Styles === */
+.tm-card {
+    --tm-card-radius: 12px;
+    --tm-card-padding: 2rem 1.5rem;
+    --tm-card-shadow: 0 4px 10px rgba(0,0,0,0.06);
+
+    background-color: #ffffff;
+    border-radius: var(--tm-card-radius);
+    padding: var(--tm-card-padding);
+    box-shadow: var(--tm-card-shadow);
+    text-align: center;
+}
+
+.tm-card .tm-card-avatar {
+    width: 112px;  /* 7rem */
+    height: 112px; /* 7rem */
+    border-radius: 50%;
+    object-fit: cover;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 3px #a5b4fc; /* An indigo-tinted shadow border */
+}
+
+.tm-card .tm-card-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+}
+
+.tm-card .tm-card-role {
+    font-size: 1rem;
+    color: #4f46e5; /* Indigo */
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.tm-card .tm-card-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.tm-card .tm-card-social-link {
+    color: #9ca3af; /* Gray for icons */
+    transition: color 0.2s ease-in-out;
+}
+
+.tm-card .tm-card-social-link:hover {
+    color: #4f46e5;
+}
+
+.tm-card .tm-card-social-link svg {
+    width: 24px;
+    height: 24px;
+}
+
+        /*
+        ========================================
+        CSS Custom Properties (Marketing Theme)
+        ========================================
+        */
+        :root {
+            --color-background: #ffffff;
+            --color-text-primary: #1d1d1f;
+            --color-link-secondary: #5f5f65; /* Muted color for secondary links */
+            
+            /* Bright, attention-grabbing CTA colors */
+            --color-cta: #ff4757;
+            --color-cta-text: #ffffff;
+            --color-cta-shadow: rgba(255, 71, 87, 0.4);
+
+            --font-family-sans-serif: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            --font-weight-bold: 700;
+            --navbar-height: 80px;
+            --navbar-padding: 1.5rem;
+
+            --transition-speed: 0.2s;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap');
+        
+        /*
+        ========================================
+        Base & Page Styles
+        ========================================
+
+        /*
+        ========================================
+        Main Navbar Structure
+        ========================================
+        */
+        .navbar {
+            height: var(--navbar-height); display: flex; align-items: center;
+            position: sticky; top: 0; z-index: 1000;
+            background-color: var(--color-background); border-bottom: 1px solid #f0f0f0;
+        }
+        .navbar__container { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: var(--container-width); margin: 0 auto; padding: 0 var(--navbar-padding); }
+        .navbar__brand { font-size: 1.5rem; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+
+        /*
+        ========================================
+        Mobile Menu & Links
+        ========================================
+        */
+        .navbar__toggle { display: block; border: none; background: transparent; cursor: pointer; }
+        .navbar__menu { display: none; position: absolute; top: var(--navbar-height); left: 0; width: 100%; background-color: var(--color-background); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .navbar__menu.is-active { display: block; }
+        .navbar__item:not(:last-child) { border-bottom: 1px solid #f0f0f0; }
+
+        /* Base styles for all links */
+        .navbar__link { display: block; padding: 1.25rem var(--navbar-padding); font-weight: 500; }
+        
+        /* De-emphasized link color */
+        .navbar__link:not(.navbar__link--cta) { color: var(--color-link-secondary); }
+        .navbar__link:not(.navbar__link--cta):hover { color: var(--color-text-primary); }
+        
+        /* CTA button is distinct even on mobile */
+        .navbar__link--cta { color: var(--color-cta); font-weight: var(--font-weight-bold); }
+        
+        :is(.navbar__toggle, .navbar__link):focus-visible { outline: 2px solid var(--color-cta); outline-offset: 2px; border-radius: 4px; }
+        
+        /*
+        ========================================
+        Desktop Styles & CTA Emphasis
+        ========================================
+        */
+        @media (min-width: 768px) {
+            .navbar__toggle { display: none; }
+            .navbar__menu { display: flex; align-items: center; position: static; width: auto; background: none; box-shadow: none; }
+            .navbar__list { display: flex; align-items: center; gap: 2rem; }
+            .navbar__item:not(:last-child) { border: none; }
+            .navbar__link { padding: 0.5rem; position: relative; }
+            
+            /* Subtle underline for secondary links on desktop */
+            .navbar__link:not(.navbar__link--cta)::after {
+                content: ''; position: absolute; bottom: 0px; left: 0;
+                width: 0; height: 2px; background-color: var(--color-text-primary);
+                transition: width var(--transition-speed) ease;
+            }
+            .navbar__link:not(.navbar__link--cta):hover::after,
+            .navbar__link:not(.navbar__link--cta):focus::after { width: 100%; }
+            
+            /* --- THE CTA BUTTON --- */
+            .navbar__item--cta { margin-left: 1rem; }
+            .navbar__link--cta {
+                color: var(--color-cta-text);
+                background-color: var(--color-cta);
+                padding: 0.75rem 1.5rem;
+                border-radius: 50px;
+                transition: transform var(--transition-speed) ease,
+                            box-shadow var(--transition-speed) ease;
+            }
+            /* The "Lift & Glow" effect */
+            .navbar__link--cta:hover, .navbar__link--cta:focus-visible {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px var(--color-cta-shadow);
+                color: var(--color-cta-text); /* Ensure text stays white on hover */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="navbar__container">
+    <a href="home.html" class="navbar__brand">LeadGen</a>
+
+    <button class="navbar__toggle" id="navbarToggle" aria-label="Open menu" aria-controls="navbarMenu" aria-expanded="false">&#x2630;</button>
+
+    <nav class="navbar__menu" id="navbarMenu">
+      <ul class="navbar__list">
+        <li class="navbar__item"><a href="home.html" class="navbar__link">Home</a></li>
+        <li class="navbar__item"><a href="shop.html" class="navbar__link">Shop</a></li>
+        <li class="navbar__item"><a href="about.html" class="navbar__link">About</a></li>
+        <li class="navbar__item"><a href="cart.html" class="navbar__link">Cart</a></li>
+        <li class="navbar__item navbar__item--cta" id="navbarAuthItem">
+        <a href="login" class="navbar__link navbar__link--cta" id="navbarAuthLink">Login</a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+    <main class="content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+
+<div class="footer-divider" aria-hidden="true">
+        <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+            <path d="M0,50 C240,90 480,10 720,50 C960,90 1200,10 1440,50 V100 H0 Z"></path>
+        </svg>
+    </div>
+
+    <footer class="footer-wave" role="contentinfo">
+        <div class="container">
+            <div class="footer-wave__main-grid">
+                <div class="footer-wave__about">
+                    <h3 class="footer-wave__heading">About Us</h3>
+                    <p>We create beautiful, modern web templates to help your projects stand out. This wave is just the beginning.</p>
+                </div>
+                <div class="footer-wave__links">
+                    <h3 class="footer-wave__heading">Navigate</h3>
+                    <ul>
+                        <li><a href="#">Home</a></li>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Services</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-wave__links">
+                    <h3 class="footer-wave__heading">Resources</h3>
+                    <ul>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">FAQ</a></li>
+                        <li><a href="#">Support</a></li>
+                    </ul>
+                </div>
+                 <div class="footer-wave__links">
+                    <h3 class="footer-wave__heading">Legal</h3>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-wave__bottom">
+                <p class="footer-wave__copyright">&copy; 2025 Your Brand. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const navbarToggle = document.getElementById('navbarToggle');
+        const navbarMenu = document.getElementById('navbarMenu');
+        if (navbarToggle) {
+            navbarToggle.addEventListener('click', function() {
+                navbarToggle.classList.toggle('is-active');
+                navbarMenu.classList.toggle('is-active');
+            });
+        }
+        const megaMenuToggles = document.querySelectorAll('.mega-menu-toggle');
+        megaMenuToggles.forEach(toggle => {
+            toggle.addEventListener('click', function(event) {
+                const isMobileView = getComputedStyle(navbarToggle).display !== 'none';
+                if (isMobileView) {
+                    event.preventDefault();
+                    const parentItem = this.closest('.mega-menu-item');
+                    parentItem.classList.toggle('is-active');
+                }
+            });
+        });
+    });
+    </script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const authItem = document.getElementById('navbarAuthItem');
+    if (!authItem) return;
+
+    const username = localStorage.getItem('username');
+    const role = localStorage.getItem('role');
+
+    if (username) {
+        // Replace login button with profile dropdown using CTA styling
+        authItem.innerHTML = `
+            <div class="navbar__item navbar__item--cta" style="position:relative;">
+                <button class="navbar__link" id="profileBtn">
+                    ${username} &#x25BC;
+                </button>
+                <ul  id="profileDropdown" style="
+                    display:none;
+                    position:absolute;
+                    top:100%;
+                    right:0;
+                    background:#fff;
+                    min-width:160px;
+                    z-index:100;
+                    padding:0;
+                    list-style:none;
+                ">
+                    <li>
+                        <a href="reset-password" class="navbar__link" style="
+                            padding:0.75rem 1rem;
+                            display:block;
+                            color:var(--color-text-primary);
+                        ">Reset Password</a>
+                    </li>
+                    <li>
+                        <a href="#" id="logoutBtn" class="navbar__link" style="
+                            padding:0.75rem 1rem;
+                            display:block;
+                            color:var(--color-text-primary);
+                        ">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        `;
+
+        const profileBtn = document.getElementById('profileBtn');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        // Toggle dropdown
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.style.display = profileDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Close dropdown on click outside
+        document.addEventListener('click', () => {
+            profileDropdown.style.display = 'none';
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('username');
+            localStorage.removeItem('role');
+            localStorage.removeItem('jwtToken');
+            location.reload(); // reload page to show login button again
+        });
+    }
+});
+</script>
+
+
+
+
+</body>
+</html>

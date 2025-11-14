@@ -1,0 +1,59 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard - Mini Mart{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<p>Welcome to the admin dashboard. You can manage products and categories here.</p>
+
+<!-- Example Stats -->
+<div class="row mt-4">
+  <div class="col-md-4">
+    <div class="card text-white bg-primary mb-3">
+      <div class="card-header">Total Products</div>
+      <div class="card-body">
+        <h5 class="card-title" id="totalProducts">0</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-success mb-3">
+      <div class="card-header">Total Categories</div>
+      <div class="card-body">
+        <h5 class="card-title" id="totalCategories">0</h5>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const token = localStorage.getItem("jwtToken");
+  const role = localStorage.getItem("role");
+
+  if (!token || role !== "admin") {
+    alert("Unauthorized: Admins only");
+    window.location.href = "/"; // redirect non-admins
+  }
+  // Load username from localStorage
+  const username = localStorage.getItem("username");
+  if(username) {
+    document.getElementById("username").innerText = username;
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("jwtToken");
+      localStorage.removeItem("username");
+      window.location.href = "/login";
+    });
+  }
+
+  // TODO: Replace with API call to get real counts
+  document.getElementById("totalProducts").innerText = 12; // example
+  document.getElementById("totalCategories").innerText = 5; // example
+</script>
+{% endblock %}

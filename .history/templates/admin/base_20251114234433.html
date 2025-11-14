@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+
+  <!-- Google Font: DM Sans -->
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================
+       Design Tokens
+    ========================== */
+    :root {
+      --font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --color-bg: #ffffff;
+      --color-surface: #f8f9fa;
+      --color-text: #1d1d1f;
+      --color-text-muted: #5f5f65;
+      --color-primary: #4f46e5;
+      --color-primary-light: #6366f1;
+      --color-primary-shadow: rgba(79, 70, 229, 0.3);
+      --color-danger: #ff4757;
+      --color-border: #e9ecef;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --transition: all 0.2s ease;
+      --navbar-height: 70px;
+      --sidebar-width: 240px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-family); background-color: #f5f5f5; color: var(--color-text); line-height: 1.6; }
+
+    /* =========================
+       Navbar
+    ========================== */
+    .navbar {
+      height: var(--navbar-height);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .navbar__brand {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text);
+      text-decoration: none;
+    }
+
+    .navbar__right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .navbar__user {
+      font-weight: 600;
+      color: var(--color-text-muted);
+      font-size: 0.95rem;
+    }
+
+    .navbar__logout {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      border-radius: 50px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 2px 6px transparent;
+    }
+
+    .navbar__logout:hover {
+      background: var(--color-primary-light);
+      box-shadow: 0 4px 12px var(--color-primary-shadow);
+      transform: translateY(-1px);
+    }
+
+    /* =========================
+       Layout
+    ========================== */
+    .admin-layout {
+      display: flex;
+      min-height: calc(100vh - var(--navbar-height));
+    }
+
+    /* =========================
+       Sidebar
+    ========================== */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: #ffffff;
+      border-right: 1px solid var(--color-border);
+      padding: 1.5rem 0;
+      position: sticky;
+      top: var(--navbar-height);
+      height: calc(100vh - var(--navbar-height));
+      overflow-y: auto;
+    }
+
+    .sidebar__list { list-style: none; padding: 0; margin: 0; }
+    .sidebar__item { margin-bottom: 0.25rem; }
+    .sidebar__link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1.5rem;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      margin: 0 1rem;
+      transition: var(--transition);
+    }
+    .sidebar__link:hover,
+    .sidebar__link.active {
+      background: #eef2ff;
+      color: var(--color-primary);
+    }
+    .sidebar__link.active {
+      font-weight: 700;
+      position: relative;
+    }
+    .sidebar__link.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 20px;
+      background: var(--color-primary);
+      border-radius: 2px;
+    }
+
+    /* =========================
+       Content
+    ========================== */
+    .content {
+      flex: 1;
+      padding: 2rem;
+      background: var(--color-bg);
+      overflow-x: auto;
+    }
+
+    /* =========================
+       Mobile Toggle
+    ========================== */
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--color-text);
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: -var(--sidebar-width);
+        top: var(--navbar-height);
+        height: calc(100vh - var(--navbar-height));
+        transition: left 0.3s ease;
+        z-index: 999;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      }
+      .sidebar.open { left: 0; }
+      .menu-toggle { display: block; }
+      .content { padding: 1.5rem; }
+    }
+
+    /* =========================
+       LOGOUT CONFIRM MODAL
+    ========================== */
+    #logoutModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    #logoutModal.show {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: var(--radius-md);
+      width: 90%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+    .modal-content h3 {
+      margin: 0 0 1rem;
+      font-size: 1.25rem;
+      color: var(--color-text);
+    }
+    .modal-content p {
+      margin: 0 0 1.5rem;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+    .btn-cancel {
+      background: #e9ecef;
+      color: var(--color-text);
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-confirm {
+      background: var(--color-danger);
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  // Mobile menu toggle
+  const sidebar = document.getElementById("sidebar");
+  const menuToggle = document.getElementById("menuToggle");
+  menuToggle.addEventListener("click", () => sidebar.classList.toggle("open"));
+
+  document.querySelector(".content").addEventListener("click", () => {
+    if (window.innerWidth <= 768 && sidebar.classList.contains("open")) {
+      sidebar.classList.remove("open");
+    }
+  });
+
+  // Highlight active sidebar item
+  document.querySelectorAll(".sidebar__link").forEach(link => {
+    if (link.href === window.location.href) link.classList.add("active");
+  });
+
+  // ============================
+  // USERNAME + LOGOUT WITH MODAL
+  // ============================
+  const usernameSpan = document.getElementById('username');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const modal = document.getElementById('logoutModal');
+  const cancelBtn = document.getElementById('cancelLogout');
+  const confirmBtn = document.getElementById('confirmLogout');
+
+  const token = localStorage.getItem('token');
+
+  // Show username from JWT
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const username = payload.identity || payload.sub || 'Admin';
+      usernameSpan.textContent = username;
+    } catch (e) {
+      usernameSpan.textContent = 'Admin';
+    }
+  }
+
+  // Open modal
+  logoutBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    modal.classList.add('show');
+  });
+
+  // Close modal
+  cancelBtn.addEventListener("click", () => {
+    modal.classList.remove('show');
+  });
+
+  // Close on outside click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('show');
+    }
+  });
+
+  // Confirm logout
+  confirmBtn.addEventListener("click", async () => {
+    try {
+      await fetch("/auth/logout", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch (err) {
+      // ignore
+    }
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("role");
+
+    window.location.href = "/";
+  });
+
+});
+</script>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <button class="menu-toggle" id="menuToggle">Menu</button>
+      <a href="/admin/dashboard" class="navbar__brand">Mini Mart Admin</a>
+    </div>
+
+    <!-- USERNAME + LOGOUT -->
+    <div class="navbar__right" id="authContainer">
+      <button class="navbar__logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <!-- LOGOUT CONFIRM MODAL -->
+  <div id="logoutModal">
+    <div class="modal-content">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to log out?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" id="cancelLogout">Cancel</button>
+        <button class="btn-confirm" id="confirmLogout">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <ul class="sidebar__list">
+        <li class="sidebar__item">
+          <a href="/admin/dashboard" class="sidebar__link {% if request.path == '/admin/dashboard' %}active{% endif %}">
+            Dashboard
+          </a>
+        </li>
+        <li class="sidebar__item">
+          <a href="/admin/products" class="sidebar__link {% if request.path == '/admin/products' %}active{% endif %}">
+            Products
+          </a>
+        </li>
+        <li class="sidebar__item">
+          <a href="/admin/categories" class="sidebar__link {% if request.path == '/admin/categories' %}active{% endif %}">
+            Categories
+          </a>
+        </li>
+        <li class="sidebar__item">
+          <a href="/admin/users" class="sidebar__link {% if request.path == '/admin/users' %}active{% endif %}">
+            Users
+          </a>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+{% block scripts %}
+
+{% endblock %}
+
+</body>
+</html>

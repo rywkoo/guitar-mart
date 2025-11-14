@@ -1,0 +1,261 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1.5rem;">Users</h1>
+
+<div id="usersGrid" style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:1.5rem;
+    margin-top:1rem;
+">
+  <!-- Users loaded via JS -->
+</div>
+
+<!-- USER DETAIL MODAL -->
+<div id="userModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:500px;">
+    <span id="closeUserModal" style="float:right;font-size:1.5rem;cursor:pointer;">×</span>
+    <h2 style="margin-top:0;">User Details</h2>
+
+    <div style="display:grid;gap:1rem;font-size:0.95rem;">
+      <div><strong>ID:</strong> <span id="modalId"></span></div>
+      <div><strong>Username:</strong> <span id="modalUsername"></span></div>
+      <div><strong>Email:</strong> <span id="modalEmail"></span></div>
+      <div><strong>Role:</strong> 
+        <select id="modalRole" style="padding:.4rem .8rem;border:1px solid #ced4da;border-radius:6px;">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div><strong>Status:</strong> 
+        <button id="toggleStatusBtn" style="padding:.4rem .8rem;border:none;border-radius:6px;cursor:pointer;font-weight:600;"></button>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button id="deleteUserBtn" style="background:#ff4757;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Delete User
+      </button>
+      <button id="saveUserBtn" style="background:#4f46e5;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="deleteConfirmModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1001;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:420px;text-align:center;">
+    <h3 style="margin:0 0 1rem;font-size:1.25rem;color:#1d1d1f;">Delete User</h3>
+    <p style="margin:0 0 1.5rem;color:#555;font-size:0.95rem;">
+      Permanently delete <strong id="deleteUserName"></strong>?<br>
+      This <strong>cannot be undone</strong>.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;">
+      <button id="cancelDeleteBtn"
+              style="background:#e9ecef;color:#1d1d1f;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Cancel
+      </button>
+      <button id="confirmDeleteBtn"
+              style="background:#ff4757;color:#fff;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ---------- GLOBALS ---------- */
+let currentUserId = null;
+let deleteUserId = null;
+
+/* ---------- JWT HELPER ---------- */
+function getToken() {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+        alert('JWT missing. Please log in again.');
+        throw new Error('JWT missing');
+    }
+    return token;
+}
+
+/* ---------- LOAD USERS ---------- */
+async function loadUsers() {
+    try {
+        const token = getToken();
+        const res = await fetch('/admin/api/users', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to load users');
+        const users = await res.json();
+        renderUsers(users);
+    } catch (err) {
+        console.error(err);
+        document.getElementById("usersGrid").innerHTML =
+            "<p style='grid-column:1/-1;text-align:center;color:red;'>Failed to load users</p>";
+    }
+}
+
+/* ---------- RENDER USER CARDS ---------- */
+function renderUsers(users) {
+    const grid = document.getElementById('usersGrid');
+    if (!users || users.length === 0) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#888;">No users found.</p>';
+        return;
+    }
+    grid.innerHTML = users.map(u => `
+        <div class="user-card" onclick="openUserModal(${u.id})"
+             style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.05);">
+          <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">${u.username}</div>
+          <div style="color:#5f5f65;font-size:0.9rem;margin-top:0.5rem;">${u.email}</div>
+          <div style="margin-top:0.75rem;display:flex;gap:0.5rem;align-items:center;">
+            <span class="badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role}</span>
+            <span class="badge ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:0.5rem;">
+            <button onclick="event.stopPropagation(); openUserModal(${u.id})"
+                    style="background:#4f46e5;color:#fff;padding:.35rem .75rem;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;">
+              Edit
+            </button>
+            <button onclick="event.stopPropagation(); openDeleteModal(${u.id}, '${u.username}')"
+                    style="background:#ff4757;color:#fff;padding:.35rem .75rem;border:none;border-radius:8px;cursor:pointer;font-size:0.85rem;">
+              Delete
+            </button>
+          </div>
+        </div>
+    `).join('');
+}
+
+/* ---------- OPEN USER MODAL ---------- */
+async function openUserModal(id) {
+    try {
+        const token = getToken();
+        const res = await fetch(`/admin/api/users/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('User not found');
+        const user = await res.json();
+
+        currentUserId = id;
+        document.getElementById('modalId').textContent = user.id;
+        document.getElementById('modalUsername').textContent = user.username;
+        document.getElementById('modalEmail').textContent = user.email;
+        document.getElementById('modalRole').value = user.role;
+
+        const btn = document.getElementById('toggleStatusBtn');
+        if (user.is_active) {
+            btn.textContent = 'Disable';
+            btn.style.background = '#ff4757';
+        } else {
+            btn.textContent = 'Enable';
+            btn.style.background = '#10b981';
+        }
+
+        document.getElementById('userModal').style.display = 'flex';
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+/* ---------- SAVE USER CHANGES ---------- */
+document.getElementById('saveUserBtn').onclick = async () => {
+    try {
+        const token = getToken();
+        const role = document.getElementById('modalRole').value;
+        const isActive = document.getElementById('toggleStatusBtn').textContent === 'Disable';
+
+        const res = await fetch(`/admin/api/users/${currentUserId}`, {
+            method: 'PATCH',
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: role, is_active: isActive })
+        });
+
+        if (!res.ok) {
+            const json = await res.json();
+            throw new Error(json.error || 'Failed to update user');
+        }
+
+        document.getElementById('userModal').style.display = 'none';
+        loadUsers();
+    } catch (err) {
+        alert(err.message);
+    }
+};
+
+/* ---------- TOGGLE STATUS BUTTON ---------- */
+document.getElementById('toggleStatusBtn').onclick = (e) => {
+    e.stopPropagation();
+    const btn = e.target;
+    if (btn.textContent === 'Disable') {
+        btn.textContent = 'Enable';
+        btn.style.background = '#10b981';
+    } else {
+        btn.textContent = 'Disable';
+        btn.style.background = '#ff4757';
+    }
+};
+
+/* ---------- DELETE USER ---------- */
+function openDeleteModal(id, username) {
+    deleteUserId = id;
+    document.getElementById('deleteUserName').textContent = username;
+    document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+document.getElementById('cancelDeleteBtn').onclick = () => {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+    deleteUserId = null;
+};
+
+document.getElementById('confirmDeleteBtn').onclick = async () => {
+    try {
+        const token = getToken();
+        const res = await fetch(`/admin/api/users/${deleteUserId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+            const json = await res.json();
+            throw new Error(json.error || 'Failed to delete user');
+        }
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        deleteUserId = null;
+        loadUsers();
+    } catch (err) {
+        alert(err.message);
+    }
+};
+
+/* ---------- MODAL CLOSE HANDLERS ---------- */
+function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+    if (id === 'userModal') currentUserId = null;
+    if (id === 'deleteConfirmModal') deleteUserId = null;
+}
+
+document.getElementById('closeUserModal').onclick = () => closeModal('userModal');
+
+window.onclick = (e) => {
+    if (e.target.id === 'userModal') closeModal('userModal');
+    if (e.target.id === 'deleteConfirmModal') closeModal('deleteConfirmModal');
+};
+
+/* ---------- INIT ---------- */
+loadUsers();
+</script>
+{% endblock %}
+
+

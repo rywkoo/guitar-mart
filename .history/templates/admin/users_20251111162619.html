@@ -1,0 +1,244 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1.5rem;">Users</h1>
+
+<div id="usersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;">
+  <!-- Users loaded via JS -->
+</div>
+
+<!-- USER DETAIL MODAL -->
+<div id="userModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:1000;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:500px;">
+    <span id="closeUserModal" style="float:right;font-size:1.5rem;cursor:pointer;">×</span>
+    <h2 style="margin-top:0;">User Details</h2>
+
+    <div style="display:grid;gap:1rem;font-size:0.95rem;">
+      <div><strong>ID:</strong> <span id="modalId"></span></div>
+      <div><strong>Username:</strong> <span id="modalUsername"></span></div>
+      <div><strong>Email:</strong> <span id="modalEmail"></span></div>
+      <div><strong>Role:</strong> 
+        <select id="modalRole" style="padding:.4rem .8rem;border:1px solid #ced4da;border-radius:6px;">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div><strong>Status:</strong> 
+        <button id="toggleStatusBtn" style="padding:.4rem .8rem;border:none;border-radius:6px;cursor:pointer;font-weight:600;"></button>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button id="deleteUserBtn" style="background:#ff4757;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Delete User
+      </button>
+      <button id="saveUserBtn" style="background:#4f46e5;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="deleteConfirmModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1001;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:420px;text-align:center;">
+    <h3 style="margin:0 0 1rem;font-size:1.25rem;color:#1d1d1f;">Delete User</h3>
+    <p style="margin:0 0 1.5rem;color:#555;font-size:0.95rem;">
+      Permanently delete <strong id="deleteUserName"></strong>?<br>
+      This <strong>cannot be undone</strong>.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;">
+      <button id="cancelDeleteBtn"
+              style="background:#e9ecef;color:#1d1d1f;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Cancel
+      </button>
+      <button id="confirmDeleteBtn"
+              style="background:#ff4757;color:#fff;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+/* ---------- GLOBALS ---------- */
+let currentUserId = null;
+const token = localStorage.getItem('jwtToken');
+if (!token) {
+  alert('Please log in');
+  window.location.href = '/';
+}
+
+/* ---------- LOAD USERS ---------- */
+async function loadUsers() {
+  const token = localStorage.getItem('jwtToken');
+  if (!token) {
+    alert('Session expired. Please log in again.');
+    window.location.href = '/login';
+    return;
+  }
+
+  try {
+    const res = await fetch('/admin/users', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // If response is HTML → means not authenticated
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await res.text();
+      if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+        alert('Session expired or invalid. Redirecting to login...');
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('username');
+        localStorage.removeItem('role');
+        window.location.href = '/login';
+        return;
+      }
+    }
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to load users');
+    }
+
+    const users = await res.json();
+    renderUsers(users);
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+}
+
+/* ---------- OPEN USER MODAL ---------- */
+async function openUserModal(id) {
+  currentUserId = id;
+  try {
+    const res = await fetch(`/admin/users/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load user');
+    const user = await res.json();
+
+    document.getElementById('modalId').textContent = user.id;
+    document.getElementById('modalUsername').textContent = user.username;
+    document.getElementById('modalEmail').textContent = user.email;
+    document.getElementById('modalRole').value = user.role;
+
+    const statusBtn = document.getElementById('toggleStatusBtn');
+    if (user.is_active) {
+      statusBtn.textContent = 'Disable';
+      statusBtn.style.background = '#ff4757';
+    } else {
+      statusBtn.textContent = 'Enable';
+      statusBtn.style.background = '#10b981';
+    }
+
+    document.getElementById('userModal').style.display = 'flex';
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------- SAVE CHANGES ---------- */
+document.getElementById('saveUserBtn').onclick = async () => {
+  if (!currentUserId) return;
+
+  const role = document.getElementById('modalRole').value;
+  const is_active = document.getElementById('toggleStatusBtn').textContent === 'Disable';
+
+  try {
+    const res = await fetch(`/admin/users/${currentUserId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ role, is_active })
+    });
+    if (!res.ok) throw new Error('Failed to update');
+    closeModal('userModal');
+    loadUsers();
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+/* ---------- TOGGLE STATUS BUTTON ---------- */
+document.getElementById('toggleStatusBtn').onclick = (e) => {
+  e.stopPropagation();
+  const btn = e.target;
+  if (btn.textContent === 'Disable') {
+    btn.textContent = 'Enable';
+    btn.style.background = '#10b981';
+  } else {
+    btn.textContent = 'Disable';
+    btn.style.background = '#ff4757';
+  }
+};
+
+/* ---------- DELETE USER ---------- */
+let userToDelete = null;
+document.getElementById('deleteUserBtn').onclick = () => {
+  const name = document.getElementById('modalUsername').textContent;
+  userToDelete = currentUserId;
+  document.getElementById('deleteUserName').textContent = name;
+  document.getElementById('deleteConfirmModal').style.display = 'flex';
+};
+
+document.getElementById('cancelDeleteBtn').onclick = () => {
+  document.getElementById('deleteConfirmModal').style.display = 'none';
+  userToDelete = null;
+};
+
+document.getElementById('confirmDeleteBtn').onclick = async () => {
+  if (!userToDelete) return;
+  try {
+    const res = await fetch(`/admin/users/${userToDelete}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to delete');
+    closeModal('deleteConfirmModal');
+    closeModal('userModal');
+    loadUsers();
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+/* ---------- MODAL HELPERS ---------- */
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+  if (id === 'userModal') currentUserId = null;
+  if (id === 'deleteConfirmModal') userToDelete = null;
+}
+
+document.getElementById('closeUserModal').onclick = () => closeModal('userModal');
+window.onclick = (e) => {
+  if (e.target.id === 'userModal') closeModal('userModal');
+  if (e.target.id === 'deleteConfirmModal') closeModal('deleteConfirmModal');
+};
+
+/* ---------- INIT ---------- */
+loadUsers();
+</script>
+
+<style>
+.user-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,.1); }
+.badge.admin { background:#4f46e5; color:#fff; }
+.badge.user { background:#e9ecef; color:#1d1d1f; }
+.badge.active { background:#d1fae5; color:#065f46; }
+.badge.inactive { background:#fee2e2; color:#991b1b; }
+</style>
+{% endblock %}

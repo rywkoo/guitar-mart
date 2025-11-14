@@ -1,0 +1,228 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1.5rem;">Products</h1>
+
+<button id="addProductBtn" style="
+    background-color:#4f46e5;
+    color:#ffffff;
+    font-weight:700;
+    padding:0.5rem 1.25rem;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    margin-bottom:1rem;
+    transition: all 0.2s ease;
+">Add Product</button>
+
+<table style="width:100%; border-collapse:collapse; text-align:left; box-shadow:0 4px 10px rgba(0,0,0,0.05); border-radius:8px; overflow:hidden;">
+  <thead>
+    <tr style="background-color:#f8f9fa;">
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">ID</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Name</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Price</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Stock</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Category</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Image</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr data-id="{{ p.id }}" style="border-bottom:1px solid #e9ecef; vertical-align:middle;">
+      <td style="padding:10px;">{{ p.id }}</td>
+      <td style="padding:10px;">{{ p.name }}</td>
+      <td style="padding:10px;">${{ "%.2f"|format(p.price) }}</td>
+      <td style="padding:10px;">{{ p.stock }}</td>
+      <td style="padding:10px;">{{ p.category.name if p.category else 'N/A' }}</td>
+      <td style="padding:10px;">
+        {% if p.image %}
+        <img src="{{ url_for('static', filename='images/' ~ p.image) }}" alt="{{ p.name }}" style="max-width:80px; max-height:80px; object-fit:cover; border-radius:8px; display:block; margin:auto; border:1px solid #e9ecef; padding:2px;">
+        {% else %}N/A{% endif %}
+      </td>
+      <td style="padding:10px;">
+        <button class="btn edit-btn" onclick="openEditModal({{ p.id }})" style="margin-right:5px;background:#4f46e5;color:#fff;padding:0.35rem 0.75rem;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;">Edit</button>
+        <button class="btn btn-danger" onclick="deleteProduct({{ p.id }})" style="background:#ff4757;color:#fff;padding:0.35rem 0.75rem;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s;">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Add Product Modal -->
+<div class="modal" id="addProductModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:1000;">
+  <div style="background:#fff;border-radius:12px;padding:2rem;max-width:450px;width:90%;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+    <span id="closeAddModal" style="position:absolute;top:1rem;right:1rem;font-size:1.5rem;cursor:pointer;color:#4f46e5;">&times;</span>
+    <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;">Add Product</h2>
+    <form id="productForm" enctype="multipart/form-data">
+      <input type="text" name="name" placeholder="Name" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <input type="number" step="0.01" name="price" placeholder="Price" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <input type="number" name="stock" placeholder="Stock" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <select name="category_id" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+        <option value="" disabled selected>Select Category</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="file" name="image" style="margin-bottom:0.75rem;">
+      <button type="submit" style="background-color:#4f46e5;color:#fff;font-weight:700;padding:0.5rem 1.25rem;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;">Add Product</button>
+    </form>
+    <div id="response" style="margin-top:0.75rem;"></div>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal" id="editProductModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:1000;">
+  <div style="background:#fff;border-radius:12px;padding:2rem;max-width:450px;width:90%;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+    <span id="closeEditModal" style="position:absolute;top:1rem;right:1rem;font-size:1.5rem;cursor:pointer;color:#4f46e5;">&times;</span>
+    <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;">Edit Product</h2>
+    <form id="editProductForm" enctype="multipart/form-data">
+      <input type="hidden" name="product_id" id="editProductId">
+      <input type="text" name="name" id="editName" placeholder="Name" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <input type="number" step="0.01" name="price" id="editPrice" placeholder="Price" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <input type="number" name="stock" id="editStock" placeholder="Stock" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+      <select name="category_id" id="editCategory" required style="width:100%;padding:0.5rem 0.75rem;border:1px solid #e9ecef;border-radius:8px;margin-bottom:0.75rem;">
+        <option value="" disabled>Select Category</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="file" name="image" id="editImage" style="margin-bottom:0.75rem;">
+      <img id="editImagePreview" src="" style="max-width:100px; max-height:100px; display:block; margin-bottom:0.75rem; object-fit:cover; border:1px solid #e9ecef; border-radius:8px;">
+      <button type="submit" style="background-color:#4f46e5;color:#fff;font-weight:700;padding:0.5rem 1.25rem;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;">Save Changes</button>
+    </form>
+    <div id="editResponse" style="margin-top:0.75rem;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ----------------- Modal Logic -----------------
+const addBtn = document.getElementById("addProductBtn");
+const addModal = document.getElementById("addProductModal");
+const closeAdd = document.getElementById("closeAddModal");
+addBtn.onclick = () => addModal.style.display = "flex";
+closeAdd.onclick = () => addModal.style.display = "none";
+
+const editModal = document.getElementById("editProductModal");
+const closeEdit = document.getElementById("closeEditModal");
+closeEdit.onclick = () => editModal.style.display = "none";
+
+// ----------------- Open Edit Modal -----------------
+function openEditModal(btn){
+    const row = btn.closest('tr');
+    const id = row.dataset.id;
+    const name = row.dataset.name;
+    const price = row.dataset.price;
+    const stock = row.dataset.stock;
+    const category_id = row.dataset.category;
+    const image = row.dataset.image;
+
+    document.getElementById("editProductId").value = id;
+    document.getElementById("editName").value = name;
+    document.getElementById("editPrice").value = price;
+    document.getElementById("editStock").value = stock;
+    document.getElementById("editCategory").value = category_id || '';
+
+    // Optional: if you want image preview inside modal
+    let preview = document.getElementById("editImagePreview");
+    if(!preview){
+        preview = document.createElement("img");
+        preview.id = "editImagePreview";
+        preview.style.cssText = "max-width:80px;max-height:80px;object-fit:cover;border-radius:8px;display:block;margin-bottom:0.75rem;border:1px solid #e9ecef;padding:2px;";
+        document.getElementById("editProductForm").insertBefore(preview, document.querySelector("#editProductForm input[type='file']"));
+    }
+    preview.src = image ? `/static/images/${image}` : '';
+    editModal.style.display = "flex";
+}
+
+// ----------------- Add Product -----------------
+document.getElementById('productForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const token = localStorage.getItem("jwtToken");
+  if(!token){ alert("JWT missing"); return; }
+
+  const res = await fetch("/api/products/", {
+    method: "POST",
+    headers: { "Authorization": "Bearer "+token },
+    body: formData
+  });
+
+  const data = await res.json();
+  document.getElementById("response").innerHTML = res.ok ? '<span style="color:green">Product added!</span>' : `<span style="color:red">${data.error||'Failed'}</span>`;
+  if(res.ok) setTimeout(()=>location.reload(),1000);
+});
+
+// ----------------- Edit Product -----------------
+document.getElementById('editProductForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const id = formData.get('product_id');
+  const token = localStorage.getItem("jwtToken");
+  if(!token){ alert("JWT missing"); return; }
+
+  const res = await fetch(`/admin/api/products/${id}`, {
+    method: "PATCH",
+    headers: { "Authorization": "Bearer "+token },
+    body: formData
+  });
+
+  const data = await res.json();
+  document.getElementById("editResponse").innerHTML = res.ok ? '<span style="color:green">Product updated!</span>' : `<span style="color:red">${data.error||'Failed'}</span>`;
+
+  if(res.ok){
+    // Update row in table instantly
+    const row = document.querySelector(`tr[data-id='${id}']`);
+    if(row){
+      row.dataset.name = data.product.name;
+      row.dataset.price = data.product.price.toFixed(2);
+      row.dataset.stock = data.product.stock;
+      row.dataset.category = data.product.category_id || '';
+      row.dataset.image = data.product.image || '';
+
+      row.children[1].innerText = data.product.name;
+      row.children[2].innerText = "$" + parseFloat(data.product.price).toFixed(2);
+      row.children[3].innerText = data.product.stock;
+      row.children[4].innerText = e.target.editCategory.options[e.target.editCategory.selectedIndex].text;
+      row.children[5].innerHTML = data.product.image ? `<img src="/static/images/${data.product.image}" style="max-width:80px;max-height:80px;object-fit:cover;border-radius:8px;display:block;margin:auto;border:1px solid #e9ecef;padding:2px;">` : 'N/A';
+    }
+    setTimeout(()=>editModal.style.display="none",500);
+  }
+});
+
+// ----------------- Delete Product -----------------
+async function deleteProduct(id){
+  if(!confirm("Are you sure you want to delete this product?")) return;
+  const token = localStorage.getItem("jwtToken");
+  if(!token){ alert("JWT missing"); return; }
+
+  try{
+    const res = await fetch(`/admin/api/products/${id}`, {
+      method:"DELETE",
+      headers:{ "Authorization":"Bearer "+token, "Accept":"application/json" }
+    });
+    const data = await res.json();
+
+    if(res.ok){
+      alert(data.message || "Product deleted!");
+      const row = document.querySelector(`tr[data-id='${id}']`);
+      if(row) row.remove();
+    }else{
+      alert(data.error || "Failed to delete product");
+    }
+  }catch(err){
+    alert("Error: "+err.message);
+  }
+}
+
+// ----------------- Close modals on outside click -----------------
+window.onclick = (e)=>{
+  if(e.target==addModal) addModal.style.display="none";
+  if(e.target==editModal) editModal.style.display="none";
+};
+</script>
+{% endblock %}
+

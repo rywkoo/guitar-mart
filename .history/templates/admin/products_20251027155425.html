@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<h1>Products</h1>
+<button class="btn" id="addProductBtn">Add Product</button>
+
+<table style="margin-top:10px;">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Stock</th>
+        <th>Category ID</th>
+    </tr>
+    {% for p in products %}
+    <tr>
+        <td>{{ p.id }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.price }}</td>
+        <td>{{ p.stock }}</td>
+        <td>{{ p.category_id }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Add Product Modal -->
+<div class="modal" id="addProductModal">
+    <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <h2>Add Product</h2>
+        <form id="productForm" enctype="multipart/form-data">
+            <input type="text" name="name" placeholder="Name" required><br><br>
+            <input type="number" step="0.01" name="price" placeholder="Price" required><br><br>
+            <input type="number" name="stock" placeholder="Stock" required><br><br>
+            <input type="number" name="category_id" placeholder="Category ID" required><br><br>
+            <input type="file" name="image"><br><br>
+            <button type="submit" class="btn">Add Product</button>
+        </form>
+        <div id="response"></div>
+    </div>
+</div>
+
+<script>
+const addBtn = document.getElementById("addProductBtn");
+const modal = document.getElementById("addProductModal");
+const closeBtn = document.getElementById("closeModal");
+
+addBtn.onclick = () => modal.style.display = "flex";
+closeBtn.onclick = () => modal.style.display = "none";
+window.onclick = (e) => { if (e.target == modal) modal.style.display = "none"; }
+
+const form = document.getElementById('productForm');
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const token = localStorage.getItem("jwtToken");
+    if(!token){ alert("You need a JWT token!"); return; }
+
+    const res = await fetch("/api/products/", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token },
+        body: formData
+    });
+
+    const data = await res.json();
+    document.getElementById("response").innerText = JSON.stringify(data, null, 2);
+});
+</script>
+{% endblock %}

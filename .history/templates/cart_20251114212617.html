@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}Your Cart - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+.cart-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.cart-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.cart-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #eee;
+  gap: 1rem;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #f3f3f3;
+}
+
+.cart-item-info {
+  flex: 1;
+}
+
+.cart-item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cart-price {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qty-btn {
+  background: #e8e8e8;
+  border: none;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.qty-btn:hover {
+  background: #dcdcdc;
+}
+
+.remove-btn {
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background: #ff6b6b;
+}
+
+.cart-summary {
+  margin-top: 2rem;
+  text-align: right;
+}
+
+.cart-summary h3 {
+  font-size: 1.4rem;
+}
+
+.checkout-btn {
+  margin-top: 1rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.checkout-btn:hover {
+  background: var(--color-primary-light);
+  box-shadow: 0 4px 12px var(--color-primary-shadow);
+}
+
+/* Remove Confirmation Modal */
+#removeModal {
+  display: none;
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#removeModal.show {
+  display: flex;
+  opacity: 1;
+}
+
+#removeModal .modal-box {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+  transform: scale(0.85);
+  transition: transform 0.25s ease;
+}
+
+#removeModal.show .modal-box {
+  transform: scale(1);
+}
+
+#removeModal .modal-box button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 0.5rem;
+}
+
+#removeModal .cancel-btn {
+  background: #e9ecef;
+  color: #333;
+}
+
+#removeModal .confirm-btn {
+  background: var(--color-danger);
+  color: white;
+}
+
+</style>
+
+<div class="cart-container">
+  <h2 class="cart-title">Your Cart</h2>
+  <div id="cartItems"></div>
+  <div class="cart-summary">
+    <h3>Total: $<span id="cartTotal">0.00</span></h3>
+    <button class="checkout-btn">Checkout</button>
+  </div>
+</div>
+
+<!-- Remove Modal -->
+<div id="removeModal">
+  <div class="modal-box">
+    <p>Are you sure you want to remove this item from your cart?</p>
+    <button class="cancel-btn" id="cancelRemove">Cancel</button>
+    <button class="confirm-btn" id="confirmRemove">Remove</button>
+  </div>
+</div>
+
+<script>
+let itemToRemoveId = null;
+
+function loadCart() {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const cartItemsDiv = document.getElementById("cartItems");
+
+  if (cart.length === 0) {
+    cartItemsDiv.innerHTML = `<div class="cart-empty">Your cart is empty.</div>`;
+    document.getElementById("cartTotal").textContent = "0.00";
+    updateCartCount();
+    return;
+  }
+
+  let html = "";
+  let total = 0;
+
+  cart.forEach(item => {
+    const subtotal = item.price * item.quantity;
+    total += subtotal;
+
+    html += `
+      <div class="cart-item" data-id="${item.id}">
+        <img src="/static/images/${item.image}" alt="${item.name}">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-price">$${item.price.toFixed(2)}</div>
+        </div>
+
+        <div class="cart-qty">
+          <button class="qty-btn" onclick="changeQty(${item.id}, -1)">-</button>
+          <span>${item.quantity}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+        </div>
+
+        <button class="remove-btn" onclick="confirmRemove(${item.id})">Remove</button>
+      </div>
+    `;
+  });
+
+  cartItemsDiv.innerHTML = html;
+  document.getElementById("cartTotal").textContent = total.toFixed(2);
+  updateCartCount();
+}
+
+function changeQty(id, amount) {
+  let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  cart = cart.map(item => {
+    if (item.id === id) {
+      return { ...item, quantity: Math.max(1, item.quantity + amount) };
+    }
+    return item;
+  });
+  localStorage.setItem("cart", JSON.stringify(cart));
+  loadCart();
+}
+
+function confirmRemove(id) {
+  itemToRemoveId = id;
+  const modal = document.getElementById("removeModal");
+  modal.classList.add("show");
+}
+
+document.getElementById("cancelRemove").addEventListener("click", () => {
+  const modal = document.getElementById("removeModal");
+  modal.classList.remove("show");
+  setTimeout(() => modal.style.display = "none", 250); // wait for transition
+});
+
+document.getElementById("confirmRemove").addEventListener("click", () => {
+  if (itemToRemoveId !== null) {
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    cart = cart.filter(item => item.id !== itemToRemoveId);
+    localStorage.setItem("cart", JSON.stringify(cart));
+    itemToRemoveId = null;
+
+    const modal = document.getElementById("removeModal");
+    modal.classList.remove("show");
+    setTimeout(() => modal.style.display = "none", 250); // wait for transition
+
+    loadCart();
+  }
+});
+
+
+document.getElementById("cancelRemove").addEventListener("click", () => {
+  itemToRemoveId = null;
+  document.getElementById("removeModal").style.display = "none";
+});
+
+document.getElementById("confirmRemove").addEventListener("click", () => {
+  if (itemToRemoveId !== null) {
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    cart = cart.filter(item => item.id !== itemToRemoveId);
+    localStorage.setItem("cart", JSON.stringify(cart));
+    itemToRemoveId = null;
+    document.getElementById("removeModal").style.display = "none";
+    loadCart();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", loadCart);
+</script>
+{% endblock %}

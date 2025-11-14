@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <style>
+    /* ---------- Base Theme ---------- */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f0e6; /* soft café background */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ---------- Navbar ---------- */
+    nav.navbar {
+      background-color: #6b4f4f; /* coffee brown */
+      color: #fff;
+      padding: 0.7rem 1rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    nav.navbar a, nav.navbar span {
+      color: #fff;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+    nav.navbar a:hover {
+      color: #ffd9b3;
+      text-decoration: underline;
+    }
+    nav .navbar-brand {
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* ---------- Sidebar ---------- */
+    .sidebar {
+      background-color: #d9c6b1; /* latte shade */
+      min-height: 100vh;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      padding-top: 1rem;
+      position: sticky;
+      top: 0;
+    }
+    .sidebar a {
+      display: block;
+      padding: 12px 18px;
+      color: #4b3b3b;
+      font-weight: 600;
+      border-radius: 8px;
+      margin-bottom: 5px;
+      transition: background-color 0.25s, color 0.25s;
+    }
+    .sidebar a:hover,
+    .sidebar a.active {
+      background-color: #c2a98d;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* ---------- Content ---------- */
+    .content {
+      padding: 30px;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      margin: 25px;
+      flex: 1;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .ml-auto {
+      margin-left: auto !important;
+    }
+
+    /* ---------- Utility ---------- */
+    .d-flex {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---------- Buttons ---------- */
+    a.text-danger {
+      background: rgba(255,255,255,0.15);
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: 0.3s;
+      margin-left: 10px;
+    }
+    a.text-danger:hover {
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+    }
+
+    /* ---------- Scrollbar ---------- */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #b08a6e;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg">
+  <span class="navbar-brand">☕ Mini Mart Admin</span>
+  <div class="ml-auto d-flex align-items-center">
+    <span id="username" class="mr-3"></span>
+    <a id="logoutBtn" href="#" class="text-danger">Logout</a>
+  </div>
+</nav>
+
+<div class="d-flex">
+  <div class="sidebar p-3" style="width:220px;">
+    <a href="/admin/dashboard" class="{% if 'dashboard' in request.path %}active{% endif %}">🏠 Dashboard</a>
+    <a href="/admin/products" class="{% if 'products' in request.path %}active{% endif %}">📦 Products</a>
+    <a href="/admin/categories" class="{% if 'categories' in request.path %}active{% endif %}">🗂 Categories</a>
+    <a href="/admin/users" class="{% if 'users' in request.path %}active{% endif %}">👥 Users</a>
+  </div>
+  <div class="flex-fill content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+(function() {
+    const username = localStorage.getItem("username");
+    if (username) {
+        document.getElementById("username").innerText = username;
+    }
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", function(e) {
+            e.preventDefault();
+            localStorage.removeItem("jwtToken");
+            localStorage.removeItem("username");
+            localStorage.removeItem("role");
+            window.location.href = "/";
+        });
+    }
+
+    const role = localStorage.getItem("role");
+    if (role !== "admin") {
+        alert("Unauthorized: Admins only");
+        window.location.href = "/";
+    }
+})();
+</script>
+{% endblock %}
+
+</body>
+</html>

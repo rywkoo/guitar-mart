@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Register - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+body {
+    font-family: "DM Sans", sans-serif;
+    background-color: #f9fafb;
+    color: #1d1d1f;
+}
+.register-container {
+    max-width: 400px;
+    margin: 5rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    text-align: center;
+}
+.register-container h2 {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+}
+button {
+    background-color: #ff4757;
+    color: #fff;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+}
+button:hover {
+    background-color: #e63946;
+}
+.msg {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+}
+.msg.success { color: #16a34a; }
+.msg.error { color: #dc2626; }
+.login-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #5f5f65;
+}
+.login-link a {
+    color: #ff4757;
+    font-weight: 700;
+    text-decoration: none;
+}
+.login-link a:hover {
+    text-decoration: underline;
+}
+</style>
+
+<div class="register-container">
+    <h2>Create an Account</h2>
+
+    <!-- Step 1: Request verification token -->
+    <form id="tokenForm">
+        <input type="email" name="email" placeholder="Email" required>
+        <button type="submit">Send Verification Code</button>
+        <div id="tokenMessage" class="msg"></div>
+    </form>
+
+    <!-- Step 2: Complete registration -->
+    <form id="registerForm" style="display:none;">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email" required readonly>
+        <input type="password" name="password" placeholder="Password" required>
+        <input type="text" name="token" placeholder="Verification Code" required>
+        <button type="submit">Register</button>
+        <div id="registerMessage" class="msg"></div>
+    </form>
+
+    <div class="login-link">
+        Already have an account? <a href="/login">Login here</a>
+    </div>
+</div>
+
+<script>
+const tokenForm = document.getElementById('tokenForm');
+const tokenMessage = document.getElementById('tokenMessage');
+const registerForm = document.getElementById('registerForm');
+const registerMessage = document.getElementById('registerMessage');
+
+tokenForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    tokenMessage.textContent = '';
+    tokenMessage.className = 'msg error';
+
+    const email = tokenForm.email.value.trim();
+    if (!email) return tokenMessage.textContent = 'Email is required';
+
+    try {
+        const res = await fetch('/api/auth/send_register_token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            tokenMessage.className = 'msg success';
+            tokenMessage.textContent = 'Verification code sent! Check your email.';
+            // Show register form
+            registerForm.style.display = 'block';
+            registerForm.email.value = email;
+        } else {
+            tokenMessage.textContent = result.error || result.message || 'Failed to send token';
+        }
+    } catch (err) {
+        tokenMessage.textContent = 'Network error: ' + err.message;
+    }
+});
+
+registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    registerMessage.textContent = '';
+    registerMessage.className = 'msg error';
+
+    const formData = new FormData(registerForm);
+    const data = {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        token: formData.get('token')
+    };
+
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            registerMessage.className = 'msg success';
+            registerMessage.textContent = 'Account created! Redirecting to login...';
+            setTimeout(() => window.location.href = '/login', 1500);
+        } else {
+            registerMessage.textContent = result.error || result.message || 'Registration failed';
+        }
+    } catch (err) {
+        registerMessage.textContent = 'Network error: ' + err.message;
+    }
+});
+</script>
+{% endblock %}

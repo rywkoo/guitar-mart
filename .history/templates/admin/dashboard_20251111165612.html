@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <h2 class="mb-4">Dashboard</h2>
+  <p class="text-muted">Welcome, <span id="adminUsername">Admin</span>. Manage your store from here.</p>
+
+  <div class="row g-4 mt-3">
+    <!-- Total Products -->
+    <div class="col-md-4 col-sm-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="card-title text-primary mb-0">Total Products</h6>
+            <i class="fas fa-box fa-lg text-primary"></i>
+          </div>
+          <h3 class="mb-0" id="totalProducts">0</h3>
+          <small class="text-muted mt-2">Active items in catalog</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Categories -->
+    <div class="col-md-4 col-sm-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="card-title text-success mb-0">Total Categories</h6>
+            <i class="fas fa-tags fa-lg text-success"></i>
+          </div>
+          <h3 class="mb-0" id="totalCategories">0</h3>
+          <small class="text-muted mt-2">Product groupings</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Users -->
+    <div class="col-md-4 col-sm-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="card-title text-info mb-0">Total Users</h6>
+            <i class="fas fa-users fa-lg text-info"></i>
+          </div>
+          <h3 class="mb-0" id="totalUsers">0</h3>
+          <small class="text-muted mt-2">Registered accounts</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <h5>Quick Actions</h5>
+      <div class="d-flex gap-3 flex-wrap">
+        <a href="/admin/products" class="btn btn-outline-primary">
+          <i class="fas fa-cube me-2"></i>Manage Products
+        </a>
+        <a href="/admin/users" class="btn btn-outline-info">
+          <i class="fas fa-user-cog me-2"></i>Manage Users
+        </a>
+        <button class="btn btn-outline-secondary" onclick="loadCounts()">
+          <i class="fas fa-sync-alt me-2"></i>Refresh Stats
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // === SECURITY: Auto-check role from localStorage ===
+  const token = localStorage.getItem("jwtToken");
+  const role = localStorage.getItem("role");
+  const username = localStorage.getItem("username") || "Admin";
+
+  if (!token || role !== "admin") {
+    alert("Access denied. Redirecting to login...");
+    localStorage.clear();
+    window.location.href = "/login";
+  } else {
+    document.getElementById("adminUsername").textContent = username;
+  }
+
+  // === FETCH DATA WITH JWT ===
+  async function loadCounts() {
+    const headers = {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json"
+    };
+
+    try {
+      // Products
+      const prodRes = await fetch("/api/products/", { headers });
+      const products = await prodRes.json();
+      document.getElementById("totalProducts").textContent = Array.isArray(products) ? products.length : 0;
+
+      // Categories
+      const catRes = await fetch("/api/categories/", { headers });
+      const categories = await catRes.json();
+      document.getElementById("totalCategories").textContent = Array.isArray(categories) ? categories.length : 0;
+
+      // Users
+      const userRes = await fetch("/admin/users", { headers });
+      const users = await userRes.json();
+      document.getElementById("totalUsers").textContent = Array.isArray(users) ? users.length : 0;
+
+    } catch (err) {
+      console.error("Load error:", err);
+    }
+  }
+
+  loadCounts();
+  setInterval(loadCounts, 30000);
+</script>
+{% endblock %}

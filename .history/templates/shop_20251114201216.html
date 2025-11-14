@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:1rem; padding:2rem; flex-wrap:wrap;">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" style="width:250px; position:sticky; top:calc(var(--navbar-height) + 1rem); border:1px solid var(--color-border); padding:1rem; border-radius:var(--radius-md); background:var(--color-bg); height:max-content;">
+    <h2 style="font-size:1.25rem; margin-bottom:1rem; font-weight:600;">Filter Products</h2>
+    
+    <!-- Search -->
+    <input type="text" id="searchInput" placeholder="Search name or category..." 
+           style="width:100%; padding:.5rem; margin-bottom:1rem; border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+
+    <!-- Price -->
+    <label style="display:block; margin-bottom:.25rem;">Max Price: <span id="priceValue"></span></label>
+    <input type="range" id="priceSlider" min="0" max="5000" step="1" value="5000" style="width:100%; margin-bottom:1rem;">
+
+    <!-- Categories -->
+    <div id="categoryFilters" style="margin-bottom:1rem;">
+      <strong>Categories:</strong><br>
+    </div>
+  </aside>
+
+  <!-- Product Grid -->
+  <div id="productGrid" style="flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem;">
+    <!-- Filled by JS -->
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ---------- LOCAL MODAL (self-contained) ----------
+const modal = document.createElement('div');
+modal.id = 'shopModal';
+Object.assign(modal.style, {
+  display: 'none', position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+  zIndex: 2000, alignItems: 'center', justifyContent: 'center', opacity: 0,
+  transition: 'opacity .25s ease'
+});
+document.body.appendChild(modal);
+
+const modalContent = document.createElement('div');
+Object.assign(modalContent.style, {
+  background: '#fff', padding: '1.5rem', borderRadius: '12px', width: '90%',
+  maxWidth: '380px', textAlign: 'center', transform: 'scale(.9)',
+  transition: 'transform .25s ease'
+});
+modal.appendChild(modalContent);
+
+const msg = document.createElement('p');
+msg.id = 'shopModalMessage';
+Object.assign(msg.style, { margin: '0 0 1.5rem', fontSize: '1rem', color: '#333' });
+modalContent.appendChild(msg);
+
+const btns = document.createElement('div');
+Object.assign(btns.style, { display: 'flex', gap: '.75rem', justifyContent: 'center' });
+modalContent.appendChild(btns);
+
+const cancelBtn = document.createElement('button');
+cancelBtn.textContent = 'Cancel';
+Object.assign(cancelBtn.style, {
+  background: '#e9ecef', color: '#333', border: 'none', padding: '.5rem 1rem',
+  borderRadius: '8px', cursor: 'pointer', fontWeight: 600
+});
+btns.appendChild(cancelBtn);
+
+const okBtn = document.createElement('button');
+okBtn.textContent = 'OK';
+Object.assign(okBtn.style, {
+  background: '#4f46e5', color: 'white', border: 'none', padding: '.5rem 1rem',
+  borderRadius: '8px', cursor: 'pointer', fontWeight: 600
+});
+btns.appendChild(okBtn);
+
+function showModal(message, onConfirm) {
+  msg.textContent = message;
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => {
+    modal.style.opacity = '1';
+    modalContent.style.transform = 'scale(1)';
+  });
+
+  const close = () => {
+    modal.style.opacity = '0';
+    modalContent.style.transform = 'scale(.9)';
+    setTimeout(() => modal.style.display = 'none', 250);
+  };
+
+  cancelBtn.onclick = close;
+  modal.onclick = e => { if (e.target === modal) close(); };
+  okBtn.onclick = () => {
+    close();
+    if (typeof onConfirm === 'function') onConfirm();
+  };
+}
+
+// ---------- CART HELPERS ----------
+function getCart() {
+  return JSON.parse(localStorage.getItem('cart') || '[]');
+}
+
+function saveCart(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart));
+  if (window.updateCartCount) window.updateCartCount();
+}
+
+function addToCart(product) {
+  const cart = getCart();
+  const existing = cart.find(i => i.id === product.id);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({ ...product, quantity: 1 });
+  }
+  saveCart(cart);
+  showModal(`"${product.name}" added to cart!`);
+}
+
+// ---------- ORIGINAL FETCH & RENDER (unchanged) ----------
+let allProducts = [];
+let allCategories = [];
+
+async function fetchProducts() {
+  const res = await fetch('/api/products');
+  allProducts = await res.json();
+  renderCategories();
+  renderProducts();
+  if (window.updateCartCount) window.updateCartCount();
+}
+
+function renderCategories() {
+  const container = document.getElementById('categoryFilters');
+  const categoryMap = {};
+  allProducts.forEach(p => {
+    if (p.category_id && !categoryMap[p.category_id]) {
+      categoryMap[p.category_id] = p.category_name;
+    }
+  });
+  allCategories = Object.entries(categoryMap);
+
+  container.innerHTML = '<strong>Categories:</strong><br>';
+  allCategories.forEach(([id, name]) => {
+    container.innerHTML += `
+      <label style="display:block; margin-bottom:.25rem;">
+        <input type="checkbox" value="${id}" class="categoryCheckbox" checked> ${name}
+      </label>
+    `;
+  });
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productGrid');
+  const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+  const maxPrice = parseFloat(document.getElementById('priceSlider').value);
+  const checkedCategories = Array.from(document.querySelectorAll('.categoryCheckbox:checked'))
+                                 .map(c => parseInt(c.value));
+
+  grid.innerHTML = '';
+
+  allProducts.forEach(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery) || 
+                          (p.category_name && p.category_name.toLowerCase().includes(searchQuery));
+    const matchesPrice = p.price <= maxPrice;
+    const matchesCategory = checkedCategories.length === 0 || checkedCategories.includes(p.category_id);
+
+    if (matchesSearch && matchesPrice && matchesCategory) {
+      const imgSrc = p.image ? `/static/images/${p.image}` : 'https://via.placeholder.com/220x180?text=No+Image';
+      grid.innerHTML += `
+        <div style="border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden; background:var(--color-bg); display:flex; flex-direction:column; transition: var(--transition);">
+          <div style="height:180px; overflow:hidden;">
+            <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; transition: var(--transition);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          </div>
+          <div style="padding:0.75rem 1rem; flex:1; display:flex; flex-direction:column;">
+            <h3 style="font-size:1rem; font-weight:600; margin:0 0 0.25rem; color:var(--color-text);">${p.name}</h3>
+            <p style="margin:0 0 0.25rem; font-weight:700; color:var(--color-primary);">$${p.price.toFixed(2)}</p>
+            <p style="margin:0 0 0.25rem; font-size:0.85rem; color:var(--color-text-muted);">${p.category_name || 'No category'}</p>
+            <button class="addToCartBtn" data-product='${JSON.stringify(p)}'
+                    style="margin-top:auto; background:var(--color-primary); color:white; border:none; padding:0.5rem; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; transition:var(--transition);">
+              Add to Cart
+            </button>
+
+          </div>
+        </div>
+      `;
+    }
+  });
+}
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('addToCartBtn')) {
+    const raw = e.target.getAttribute('data-product');
+    const product = JSON.parse(raw);
+    addToCart(product);
+  }
+});
+
+
+// ---------- EVENT LISTENERS ----------
+document.getElementById('searchInput').addEventListener('input', renderProducts);
+document.getElementById('priceSlider').addEventListener('input', () => {
+  document.getElementById('priceValue').textContent = '$' + document.getElementById('priceSlider').value;
+  renderProducts();
+});
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('categoryCheckbox')) renderProducts();
+});
+
+// ---------- INIT ----------
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('priceValue').textContent = '$' + document.getElementById('priceSlider').value;
+  fetchProducts();
+});
+</script>
+{% endblock %}

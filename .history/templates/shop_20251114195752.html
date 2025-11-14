@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:1rem; padding:2rem; flex-wrap:wrap;">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" style="width:250px; position:sticky; top:calc(var(--navbar-height) + 1rem); border:1px solid var(--color-border); padding:1rem; border-radius:var(--radius-md); background:var(--color-bg); height:max-content;">
+    <h2 style="font-size:1.25rem; margin-bottom:1rem; font-weight:600;">Filter Products</h2>
+    
+    <!-- Search -->
+    <input type="text" id="searchInput" placeholder="Search name or category..." 
+           style="width:100%; padding:.5rem; margin-bottom:1rem; border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+
+    <!-- Price -->
+    <label style="display:block; margin-bottom:.25rem;">Max Price: <span id="priceValue"></span></label>
+    <input type="range" id="priceSlider" min="0" max="5000" step="1" value="5000" style="width:100%; margin-bottom:1rem;">
+
+    <!-- Categories -->
+    <div id="categoryFilters" style="margin-bottom:1rem;">
+      <strong>Categories:</strong><br>
+      <!-- dynamically filled -->
+    </div>
+  </aside>
+
+  <!-- Product Grid -->
+  <div id="productGrid" style="flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem;">
+    <!-- Product cards inserted here by JS -->
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ---------- GLOBALS ----------
+let allProducts = [];
+let allCategories = [];
+
+// ---------- CART FUNCTIONS ----------
+function getCart() {
+  const cart = localStorage.getItem('cart');
+  return cart ? JSON.parse(cart) : [];
+}
+
+function saveCart(cart) {
+  localStorage.setItem('cart', JSON.stringify(cart));
+  updateCartCount();
+}
+
+function addToCart(product) {
+  const cart = getCart();
+  const existing = cart.find(item => item.id === product.id);
+
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({ ...product, quantity: 1 });
+  }
+
+  saveCart(cart);
+  alert(`${product.name} added to cart!`);
+}
+
+function updateCartCount() {
+  const cart = getCart();
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartLinks = document.querySelectorAll('.cart-link');
+  cartLinks.forEach(link => {
+    const countSpan = link.querySelector('.cart-count') || document.createElement('sup');
+    if (!countSpan.classList.contains('cart-count')) {
+      countSpan.className = 'cart-count';
+      countSpan.style.marginLeft = '4px';
+      countSpan.style.background = 'var(--color-primary)';
+      countSpan.style.color = 'white';
+      countSpan.style.borderRadius = '50%';
+      countSpan.style.fontSize = '0.7rem';
+      countSpan.style.padding = '2px 6px';
+      countSpan.style.minWidth = '18px';
+      countSpan.style.textAlign = 'center';
+      link.appendChild(countSpan);
+    }
+    countSpan.textContent = totalItems > 0 ? totalItems : '';
+    countSpan.style.display = totalItems > 0 ? 'inline' : 'none';
+  });
+}
+
+// ---------- FETCH PRODUCTS ----------
+async function fetchProducts() {
+  const res = await fetch('/api/products');
+  allProducts = await res.json();          // <-- ALL products from the API
+  renderCategories();
+  renderProducts();
+  updateCartCount();                       // cart badge
+}
+
+// ---------- RENDER CATEGORY CHECKBOXES ----------
+function renderCategories() {
+  const container = document.getElementById('categoryFilters');
+  const categoryMap = {};
+  allProducts.forEach(p => {
+    if (p.category_id && !categoryMap[p.category_id]) {
+      categoryMap[p.category_id] = p.category_name;
+    }
+  });
+  allCategories = Object.entries(categoryMap);
+
+  container.innerHTML = '<strong>Categories:</strong><br>';
+  allCategories.forEach(([id, name]) => {
+    container.innerHTML += `
+      <label style="display:block; margin-bottom:.25rem;">
+        <input type="checkbox" value="${id}" class="categoryCheckbox" checked> ${name}
+      </label>
+    `;
+  });
+}
+
+// ---------- RENDER PRODUCTS ----------
+function renderProducts() {
+  const grid = document.getElementById('productGrid');
+  const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+  const maxPrice = parseFloat(document.getElementById('priceSlider').value);
+  const checkedCategories = Array.from(document.querySelectorAll('.categoryCheckbox:checked'))
+                                 .map(c => parseInt(c.value));
+
+  grid.innerHTML = '';
+
+  allProducts.forEach(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery) || 
+                          (p.category_name && p.category_name.toLowerCase().includes(searchQuery));
+    const matchesPrice = p.price <= maxPrice;
+    const matchesCategory = checkedCategories.length === 0 || checkedCategories.includes(p.category_id);
+
+    if (matchesSearch && matchesPrice && matchesCategory) {
+      const imgSrc = p.image ? `/static/images/${p.image}` : 'https://via.placeholder.com/220x180?text=No+Image';
+      grid.innerHTML += `
+        <div style="border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden; background:var(--color-bg); display:flex; flex-direction:column; transition: var(--transition);">
+          <div style="height:180px; overflow:hidden;">
+            <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; transition: var(--transition);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          </div>
+          <div style="padding:0.75rem 1rem; flex:1; display:flex; flex-direction:column;">
+            <h3 style="font-size:1rem; font-weight:600; margin:0 0 0.25rem; color:var(--color-text);">${p.name}</h3>
+            <p style="margin:0 0 0.25rem; font-weight:700; color:var(--color-primary);">$${p.price.toFixed(2)}</p>
+            <p style="margin:0 0 0.25rem; font-size:0.85rem; color:var(--color-text-muted);">${p.category_name || 'No category'}</p>
+            <button onclick="addToCart(${JSON.stringify(p).replace(/'/g, `\\'`)})"
+                    style="margin-top:.5rem;background:var(--color-primary);color:white;border:none;padding:.5rem;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;">
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  });
+}
+
+// ---------- EVENT LISTENERS ----------
+document.getElementById('searchInput').addEventListener('input', renderProducts);
+document.getElementById('priceSlider').addEventListener('input', () => {
+  document.getElementById('priceValue').textContent = '$' + document.getElementById('priceSlider').value;
+  renderProducts();
+});
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('categoryCheckbox')) renderProducts();
+});
+
+// ---------- INIT ----------
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('priceValue').textContent = '$' + document.getElementById('priceSlider').value;
+  fetchProducts();
+});
+
+function addToCart(product) {
+  const cart = getCart();
+  const existing = cart.find(i => i.id === product.id);
+  if (existing) {
+    existing.quantity += 1;
+  } else {
+    cart.push({ ...product, quantity: 1 });
+  }
+  saveCart(cart);
+  showModal(`"${product.name}" added to cart!`, null);
+}
+</script>
+{% endblock %}

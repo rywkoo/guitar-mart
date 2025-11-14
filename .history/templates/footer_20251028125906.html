@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Home - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --cta-bg: #f0f2f5;
+        --cta-heading-color: #1c1e21;
+        --cta-link-color: #007bff;
+        --cta-link-hover-color: #0056b3;
+
+        --footer-bg: #1c1e21;
+        --footer-text: #adb5bd;
+        --footer-link-hover: #ffffff;
+    }
+
+    /* Basic body styles */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: #ffffff;
+    }
+
+    main {
+        flex-grow: 1;
+    }
+
+    .container {
+        width: 90%;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .main-content {
+        padding: 2rem 0;
+    }
+
+    /* FOOTER STYLES START HERE */
+
+    .footer-agency {
+        text-align: center;
+    }
+
+    /* CTA Section */
+    .footer-agency__cta {
+        background-color: var(--cta-bg);
+        padding: 4rem 1.5rem;
+    }
+
+    .footer-agency__cta-heading {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--cta-heading-color);
+        margin: 0 0 1rem 0;
+    }
+
+    .footer-agency__cta-link {
+        font-size: 1.5rem;
+        font-weight: 500;
+        color: var(--cta-link-color);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .footer-agency__cta-link:hover {
+        color: var(--cta-link-hover-color);
+        text-decoration: underline;
+    }
+
+    /* Bottom Bar Section */
+    .footer-agency__bottom {
+        background-color: var(--footer-bg);
+        color: var(--footer-text);
+        padding: 2rem 0;
+    }
+
+    .footer-agency__bottom-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .footer-agency__nav ul,
+    .footer-agency__social ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    .footer-agency__nav a,
+    .footer-agency__social a {
+        color: var(--footer-text);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+
+    .footer-agency__nav a:hover,
+    .footer-agency__social a:hover {
+        color: var(--footer-link-hover);
+    }
+
+    .footer-agency__social svg {
+        width: 22px;
+        height: 22px;
+        fill: currentColor;
+    }
+
+    .footer-agency__copyright {
+        font-size: 0.875rem;
+    }
+
+    /* Media query for larger screens */
+    @media (min-width: 768px) {
+        .footer-agency__cta-heading { font-size: 3rem; }
+        .footer-agency__cta-link { font-size: 1.75rem; }
+        .footer-agency__bottom-container {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+    }
+</style>
+
+<!-- 
+======================================================================
+  HTML
+  - Place this in your <body> where you want the component to appear.
+======================================================================
+-->
+<section class="parallax-hero" id="parallax-hero-section">
+    <div class="psh-content">
+        <h1 class="title">A New Perspective</h1>
+        <p class="subtitle">Our innovative approach redefines industry standards, creating solutions that are both powerful and elegant.</p>
+        <a href="#" role="button" class="cta">Learn More About Us</a>
+    </div>
+</section>
+
+<div class="cards-grid-container" id="product-list"></div>
+
+<script>
+  async function loadProducts() {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/products");
+      const products = await response.json();
+
+      const container = document.getElementById("product-list");
+      container.innerHTML = "";
+
+      products.forEach(product => {
+        const card = `
+          <article class="product-card">
+              <a href="#" class="product-card-link">
+                  <div class="product-card-image-container">
+                      <img src="${product.image_url}" alt="${product.name}" class="product-card-image">
+                  </div>
+                  <div class="product-card-content">
+                      <span class="product-card-category">${product.category}</span>
+                      <h3 class="product-card-title">${product.name}</h3>
+                  </div>
+              </a>
+              <footer class="product-card-footer">
+                  <span class="product-card-price">$${product.price.toFixed(2)}</span>
+                  <button type="button" class="product-card-cta">Add to Cart</button>
+              </footer>
+          </article>
+        `;
+        container.insertAdjacentHTML("beforeend", card);
+      });
+    } catch (err) {
+      console.error("Error loading products:", err);
+    }
+  }
+
+  // Load products when the page opens
+  loadProducts();
+</script>
+
+<!-- 
+======================================================================
+  JavaScript
+  - Place this right before your closing </body> tag.
+======================================================================
+-->
+<script>
+(function() {
+    const parallaxSection = document.getElementById('parallax-hero-section');
+    if (!parallaxSection) return;
+
+    // --- Configuration ---
+    const parallaxSpeed = 0.5; // Set speed factor. 0.5 means it scrolls at half the speed.
+    // --- End Configuration ---
+
+    window.addEventListener('scroll', function() {
+        const offset = window.pageYOffset;
+        parallaxSection.style.backgroundPositionY = offset * parallaxSpeed + 'px';
+    });
+})();
+</script>
+{% endblock %}

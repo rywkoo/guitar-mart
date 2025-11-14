@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Your Cart - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+.cart-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.cart-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.cart-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+}
+
+.cart-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid #eee;
+  gap: 1rem;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #f3f3f3;
+}
+
+.cart-item-info {
+  flex: 1;
+}
+
+.cart-item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cart-price {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qty-btn {
+  background: #e8e8e8;
+  border: none;
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.qty-btn:hover {
+  background: #dcdcdc;
+}
+
+.remove-btn {
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background: #ff6b6b;
+}
+
+.cart-summary {
+  margin-top: 2rem;
+  text-align: right;
+}
+
+.cart-summary h3 {
+  font-size: 1.4rem;
+}
+
+.checkout-btn {
+  margin-top: 1rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.checkout-btn:hover {
+  background: var(--color-primary-light);
+  box-shadow: 0 4px 12px var(--color-primary-shadow);
+}
+
+/* Remove Confirmation Modal */
+#removeModal {
+  display: none;
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+#removeModal .modal-box {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+}
+
+#removeModal .modal-box button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 0 0.5rem;
+}
+
+#removeModal .cancel-btn {
+  background: #e9ecef;
+  color: #333;
+}
+
+#removeModal .confirm-btn {
+  background: var(--color-danger);
+  color: white;
+}
+</style>
+
+<div class="cart-container">
+  <h2 class="cart-title">Your Cart</h2>
+  <div id="cartItems"></div>
+  <div class="cart-summary">
+    <h3>Total: $<span id="cartTotal">0.00</span></h3>
+    <button class="checkout-btn">Checkout</button>
+  </div>
+</div>
+
+<!-- REMOVE ITEM MODAL -->
+<div id="removeModal" style="position:fixed; top:0; left:0; width:100%; height:100%; display:none; justify-content:center; align-items:center; background: rgba(0,0,0,0.6); z-index:3000; transition: all 0.3s ease;">
+  <div style="background:white; padding:2rem; border-radius:12px; max-width:350px; text-align:center; animation: pop 0.25s ease-out;">
+    <h3>Remove Item?</h3>
+    <p>Are you sure you want to remove this product from the cart?</p>
+    <div style="display:flex; justify-content:center; gap:1rem; margin-top:1rem;">
+      <button id="cancelRemove" style="flex:1; padding:.5rem 1rem; border-radius:10px; border:none; background:#eee; cursor:pointer; font-weight:600;">Cancel</button>
+      <button id="confirmRemove" style="flex:1; padding:.5rem 1rem; border-radius:10px; border:none; background:var(--color-danger); color:white; cursor:pointer; font-weight:600;">Remove</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let itemToRemove = null;
+
+function showRemoveModal(id) {
+  itemToRemove = id;
+  document.getElementById('removeModal').style.display = 'flex';
+}
+
+document.getElementById('cancelRemove').addEventListener('click', () => {
+  itemToRemove = null;
+  document.getElementById('removeModal').style.display = 'none';
+});
+
+document.getElementById('confirmRemove').addEventListener('click', () => {
+  if (itemToRemove !== null) {
+    const cart = getCart().filter(i => i.id !== itemToRemove);
+    saveCart(cart);
+    itemToRemove = null;
+    document.getElementById('removeModal').style.display = 'none';
+  }
+});
+
+// Update the remove buttons in cart rendering
+function renderCart() {
+  const cart = getCart();
+  const itemsDiv = document.getElementById('cartItems');
+  const sumDiv   = document.getElementById('cartSummary');
+  const emptyDiv = document.getElementById('emptyCart');
+
+  if (!cart.length) {
+    itemsDiv.innerHTML = '';
+    sumDiv.style.display = 'none';
+    emptyDiv.style.display = 'block';
+    return;
+  }
+
+  emptyDiv.style.display = 'none';
+  sumDiv.style.display = 'block';
+  itemsDiv.innerHTML = '';
+  let subtotal = 0;
+
+  cart.forEach(it => {
+    const line = it.price * it.quantity;
+    subtotal += line;
+    const img = it.image ? `/static/images/${it.image}` : 'https://via.placeholder.com/120?text=No+Image';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:1rem;background:#fff;padding:1rem;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.05);margin-bottom:1.5rem;align-items:center;';
+    row.innerHTML = `
+      <img src="${img}" alt="${it.name}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;">
+      <div style="flex:1;">
+        <h3 style="margin:0 0 .5rem;font-size:1.1rem;font-weight:600;">${it.name}</h3>
+        <p style="margin:0;color:#555;">Category: ${it.category_name||'—'}</p>
+        <p style="margin:.5rem 0 0;font-weight:600;">$${it.price.toFixed(2)}</p>
+        <div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center;">
+          <label style="font-size:.9rem;color:#555;">Qty:</label>
+          <input type="number" value="${it.quantity}" min="1" data-id="${it.id}"
+                 style="width:60px;padding:.3rem;border:1px solid #ced4da;border-radius:6px;">
+        </div>
+      </div>
+      <button onclick="showRemoveModal(${it.id})"
+              style="background:var(--color-danger);color:white;border:none;padding:.5rem 1rem;border-radius:8px;cursor:pointer;font-weight:600;">
+        Remove
+      </button>
+    `;
+    itemsDiv.appendChild(row);
+  });
+
+  const tax = subtotal * 0.05;
+  const total = subtotal + tax;
+
+  document.getElementById('summaryLines').innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+      <span>Subtotal</span><span>$${subtotal.toFixed(2)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+      <span>Tax (5%)</span><span>$${tax.toFixed(2)}</span>
+    </div>
+  `;
+  document.getElementById('totalPrice').textContent = `$${total.toFixed(2)}`;
+}
+</script>
+
+{% endblock %}

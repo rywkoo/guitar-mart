@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fdf6f0;
+    }
+
+    /* Navbar */
+    .navbar {
+      background-color: #6f4e37; /* coffee brown */
+      color: #fff;
+    }
+    .navbar a, .navbar span {
+      color: #fff;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background-color: #cbb299;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .sidebar .nav-link {
+      color: #3e2f23;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .sidebar .nav-link:hover {
+      color: #000;
+      text-decoration: underline;
+    }
+
+    /* Content */
+    .content {
+      padding: 30px;
+    }
+
+    /* Cards */
+    .card {
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Logout link */
+    #logoutBtn {
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      color: #fff;
+      font-weight: bold;
+      padding: 0;
+      margin-left: 10px;
+    }
+    #logoutBtn:hover {
+      color: #ffe5b4;
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg">
+  <span class="navbar-brand">Mini Mart Admin</span>
+  <div class="ml-auto d-flex align-items-center">
+    <span id="username"></span>
+    <button id="logoutBtn">Logout</button>
+  </div>
+</nav>
+
+<div class="d-flex">
+  <div class="sidebar">
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin/dashboard">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products">Products</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/categories">Categories</a></li>
+    </ul>
+  </div>
+  <div class="flex-fill content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Show username
+  const username = localStorage.getItem("username");
+  if(username) document.getElementById("username").innerText = username;
+
+  // Check role
+  const role = localStorage.getItem("role");
+  if(role !== "admin") {
+    alert("Unauthorized: Admins only");
+    window.location.href = "/";
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn){
+    logoutBtn.addEventListener("click", () => {
+      localStorage.removeItem("jwtToken");
+      localStorage.removeItem("username");
+      localStorage.removeItem("role");
+      window.location.href = "/";
+    });
+  }
+});
+</script>
+{% endblock %}
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}About Us - Mini Mart{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px; margin:2rem auto; padding:0 1rem;">
+
+  <!-- Company Info -->
+  <section style="text-align:center; margin-bottom:3rem;">
+    <h1 style="font-size:2rem; font-weight:700; margin-bottom:1rem;">About Mini Mart</h1>
+    <p style="font-size:1rem; color:#555; max-width:800px; margin:0 auto;">
+      Mini Mart is a dedicated online store specializing in high-quality musical instruments.
+      From guitars and keyboards to drums and accessories, we provide musicians of all levels
+      with the instruments they need to create, perform, and enjoy music.
+    </p>
+  </section>
+
+  <!-- Team Members -->
+  <section>
+    <h2 style="font-size:1.5rem; font-weight:700; margin-bottom:2rem; text-align:center;">Meet Our Team</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:2rem;">
+
+      <!-- Member 1 -->
+      <div style="background:#fff; padding:1rem; border-radius:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <img src="/static/images/team1.jpg" alt="Alice" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:1rem;">
+        <h3 style="margin:0.5rem 0; font-size:1.1rem; font-weight:600;">Alice Johnson</h3>
+        <p style="margin:0; color:#555;">CEO & Founder</p>
+      </div>
+
+      <!-- Member 2 -->
+      <div style="background:#fff; padding:1rem; border-radius:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <img src="/static/images/team2.jpg" alt="Bob" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:1rem;">
+        <h3 style="margin:0.5rem 0; font-size:1.1rem; font-weight:600;">Bob Smith</h3>
+        <p style="margin:0; color:#555;">Head of Marketing</p>
+      </div>
+
+      <!-- Member 3 -->
+      <div style="background:#fff; padding:1rem; border-radius:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <img src="/static/images/team3.jpg" alt="Carol" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:1rem;">
+        <h3 style="margin:0.5rem 0; font-size:1.1rem; font-weight:600;">Carol Lee</h3>
+        <p style="margin:0; color:#555;">Product Specialist</p>
+      </div>
+
+      <!-- Member 4 -->
+      <div style="background:#fff; padding:1rem; border-radius:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <img src="/static/images/team4.jpg" alt="David" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:1rem;">
+        <h3 style="margin:0.5rem 0; font-size:1.1rem; font-weight:600;">David Kim</h3>
+        <p style="margin:0; color:#555;">Logistics Manager</p>
+      </div>
+
+      <!-- Member 5 -->
+      <div style="background:#fff; padding:1rem; border-radius:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+        <img src="/static/images/team5.jpg" alt="Eva" style="width:120px; height:120px; object-fit:cover; border-radius:50%; margin-bottom:1rem;">
+        <h3 style="margin:0.5rem 0; font-size:1.1rem; font-weight:600;">Eva Martinez</h3>
+        <p style="margin:0; color:#555;">Customer Support Lead</p>
+      </div>
+
+    </div>
+  </section>
+</div>
+{% endblock %}

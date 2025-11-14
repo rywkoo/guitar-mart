@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+  /* =========================
+     Base Theme Variables
+  ========================== */
+  :root {
+    --color-background: #ffffff;
+    --color-surface: #f8f9fa;
+    --color-text-primary: #1d1d1f;
+    --color-text-secondary: #5f5f65;
+    --color-primary: #ff4757;
+    --color-primary-shadow: rgba(255,71,87,0.3);
+    --color-border: #e9ecef;
+    --navbar-height: 70px;
+    --navbar-padding: 1.5rem;
+    --sidebar-width: 220px;
+    --font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --transition-speed: 0.25s;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-family);
+    background-color: #f5f0e6;
+    color: var(--color-text-primary);
+  }
+
+  /* =========================
+     Navbar (Admin Version)
+  ========================== */
+  .navbar {
+    height: var(--navbar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--color-background);
+    border-bottom: 1px solid #f0f0f0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 0 var(--navbar-padding);
+  }
+
+  .navbar__brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  .navbar__right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .navbar__user {
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .navbar__logout {
+    background-color: var(--color-primary);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+  }
+
+  .navbar__logout:hover {
+    box-shadow: 0 5px 12px var(--color-primary-shadow);
+    transform: translateY(-2px);
+  }
+
+  /* =========================
+     Layout
+  ========================== */
+  .admin-layout {
+    display: flex;
+    min-height: calc(100vh - var(--navbar-height));
+  }
+
+  .sidebar {
+    width: var(--sidebar-width);
+    background-color: #d9c6b1;
+    padding: 1.5rem 1rem;
+  }
+
+  .sidebar a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: #4b3b3b;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background var(--transition-speed);
+  }
+
+  .sidebar a:hover {
+    background-color: #c2a98d;
+    color: #fff;
+  }
+
+  .content {
+    flex: 1;
+    padding: 2rem;
+    background-color: #fffdfb;
+  }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="navbar__brand">Mini Mart Admin</div>
+    <div class="navbar__right">
+      <span class="navbar__user" id="username"></span>
+      <button class="navbar__logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <aside class="sidebar">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/products">Products</a>
+      <a href="/admin/categories">Categories</a>
+      <a href="/admin/users">Users</a>
+    </aside>
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% block scripts %}
+  <script>
+  (function() {
+      const username = localStorage.getItem("username");
+      if (username) document.getElementById("username").innerText = username;
+
+      const role = localStorage.getItem("role");
+      if (role !== "admin") {
+          alert("Unauthorized: Admins only");
+          window.location.href = "/";
+      }
+
+      const logoutBtn = document.getElementById("logoutBtn");
+      logoutBtn.addEventListener("click", () => {
+          localStorage.clear();
+          window.location.href = "/";
+      });
+  })();
+  </script>
+  {% endblock %}
+</body>
+</html>

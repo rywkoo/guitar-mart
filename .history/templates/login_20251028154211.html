@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Mini Mart{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height:70vh;">
+  <div class="card p-5 shadow-sm" style="width:360px; border-radius:16px;">
+    <h2 class="text-center mb-4" style="font-weight:700; color:#1d1d1f;">Login</h2>
+    <form id="loginForm">
+      <div class="mb-3">
+        <input type="text" name="username" class="form-control" placeholder="Username" required>
+      </div>
+      <div class="mb-3">
+        <input type="password" name="password" class="form-control" placeholder="Password" required>
+      </div>
+      <button type="submit" class="navbar__link--cta w-100">Login</button>
+      <div class="message mt-3" id="message"></div>
+    </form>
+    <div class="text-center mt-4" style="font-size:0.9rem; color:#5f5f65;">
+      Don't have an account? <a href="register.html" style="color:#ff4757; font-weight:700;">Register here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const form = document.getElementById('loginForm');
+const messageDiv = document.getElementById('message');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  messageDiv.textContent = '';
+  messageDiv.style.color = 'red';
+
+  const formData = new FormData(form);
+  const data = {
+    username: formData.get('username'),
+    password: formData.get('password')
+  };
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      localStorage.setItem("jwtToken", result.access_token);
+      localStorage.setItem("username", result.username);
+      localStorage.setItem("role", result.role);
+
+      messageDiv.style.color = 'green';
+      messageDiv.textContent = 'Login successful! Redirecting...';
+      setTimeout(() => {
+        if(result.role === "admin"){
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/";
+        }
+      }, 1500);
+    } else {
+      messageDiv.textContent = result.error || JSON.stringify(result);
+    }
+  } catch (err) {
+    messageDiv.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+{% endblock %}

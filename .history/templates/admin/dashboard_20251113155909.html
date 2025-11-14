@@ -1,0 +1,239 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1rem;">Dashboard</h1>
+<p class="text-muted">Welcome, <span id="adminUsername">Admin</span>. Manage your store and view analytics here.</p>
+
+<div id="dashboardGrid" style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1.5rem;
+    margin-top:1rem;
+">
+  <!-- Stats Cards Loaded via JS -->
+</div>
+
+<!-- ---------- FILTERS & CHARTS ---------- -->
+<div style="margin-top:2rem; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,.05);">
+  <h2 style="font-weight:700;color:#1d1d1f;margin-bottom:1rem;">Purchase Reports</h2>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+    <select id="reportType" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="custom">Custom</option>
+    </select>
+
+    <input type="date" id="startDate" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;display:none;">
+    <input type="date" id="endDate" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;display:none;">
+
+    <input type="text" id="userSearch" placeholder="Search user..." style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+    <select id="usernameFilter" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+      <option value="">All Users</option>
+    </select>
+  </div>
+
+  <canvas id="purchaseChart" style="width:100%;max-height:400px;"></canvas>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let purchaseChart = null;
+let allUsers = [];
+
+// ----------------------
+// Load dashboard stats
+// ----------------------
+async function loadCounts() {
+  try {
+    const headers = { "Accept": "application/json" };
+
+    const [products, categories, users] = await Promise.all([
+      fetch("/admin/api/products", { headers }).then(r => r.json()),
+      fetch("/admin/api/categories", { headers }).then(r => r.json()),
+      fetch("/admin/api/users", { headers }).then(r => r.json())
+    ]);
+
+    allUsers = users.map(u => u.username);
+
+    // Fill username filter dropdown
+    const usernameSelect = document.getElementById("usernameFilter");
+    usernameSelect.innerHTML = '<option value="">All Users</option>';
+    allUsers.forEach(u => {
+      const option = document.createElement("option");
+      option.value = u;
+      option.textContent = u;
+      usernameSelect.appendChild(option);
+    });
+
+    // Load stats cards
+    const grid = document.getElementById("dashboardGrid");
+    grid.innerHTML = `
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Products</div>
+        <h2 style="margin-top:.5rem;color:#4f46e5;">${products.length}</h2>
+        <small class="text-muted">Active items in catalog</small>
+      </div>
+
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Categories</div>
+        <h2 style="margin-top:.5rem;color:#16a34a;">${categories.length}</h2>
+        <small class="text-muted">Product groupings</small>
+      </div>
+
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Users</div>
+        <h2 style="margin-top:.5rem;color:#0ea5e9;">${users.length}</h2>
+        <small class="text-muted">Registered accounts</small>
+      </div>
+    `;
+
+    Array.from(grid.children).forEach(card => {
+      card.onmouseover = () => card.style.transform = 'translateY(-4px)';
+      card.onmouseout = () => card.style.transform = 'translateY(0)';
+    });
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ----------------------
+// Load purchase report
+// ----------------------
+async function loadPurchaseReport(usernameParam) {
+  try {
+    const type = document.getElementById("reportType").value;
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+
+    const username = usernameParam !== undefined 
+      ? usernameParam 
+      : document.getElementById("usernameFilter").value;
+
+    const params = new URLSearchParams({ type });
+    if (username) params.append("username", username);
+    if (type === "custom") {
+      if (!startDate || !endDate) return;
+      params.append("start", startDate);
+      params.append("end", endDate);
+    }
+
+    const res = await fetch("/admin/api/reports/purchases?" + params.toString());
+    if (!res.ok) throw new Error("Failed to load report");
+    const data = await res.json();
+
+    // Prepare timeline data
+    let labels = [];
+    let totals = [];
+
+    if (username && data.invoices) {
+      // Aggregate purchases by day
+      const dailyTotals = {};
+      data.invoices.forEach(inv => {
+        const date = inv.created_at.split('T')[0];
+        dailyTotals[date] = (dailyTotals[date] || 0) + inv.total_amount;
+      });
+
+      labels = Object.keys(dailyTotals).sort((a,b) => new Date(a)-new Date(b));
+      totals = labels.map(d => dailyTotals[d]);
+
+    } else {
+      labels = data.labels || [];
+      totals = data.totals || [];
+    }
+
+    const ctx = document.getElementById("purchaseChart").getContext("2d");
+    if (purchaseChart) purchaseChart.destroy();
+
+    purchaseChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: username ? `Purchases of ${username}` : 'Total Purchases ($)',
+          data: totals,
+          backgroundColor: 'rgba(79,70,229,0.2)',
+          borderColor: '#4f46e5',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#4f46e5'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          y: { beginAtZero: true },
+          x: { ticks: { maxRotation: 0 } }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ----------------------
+// Event listeners
+// ----------------------
+document.getElementById("reportType").addEventListener("change", () => {
+  const type = document.getElementById("reportType").value;
+  if (type === "custom") {
+    document.getElementById("startDate").style.display = "inline-block";
+    document.getElementById("endDate").style.display = "inline-block";
+  } else {
+    document.getElementById("startDate").style.display = "none";
+    document.getElementById("endDate").style.display = "none";
+  }
+  loadPurchaseReport();
+});
+
+document.getElementById("usernameFilter").addEventListener("change", () => loadPurchaseReport());
+document.getElementById("startDate").addEventListener("change", () => loadPurchaseReport());
+document.getElementById("endDate").addEventListener("change", () => loadPurchaseReport());
+
+document.getElementById("userSearch").addEventListener("input", function() {
+  const value = this.value.toLowerCase();
+  const usernameSelect = document.getElementById("usernameFilter");
+  usernameSelect.innerHTML = '<option value="">All Users</option>';
+
+  allUsers.filter(u => u.toLowerCase().includes(value))
+          .forEach(u => {
+            const option = document.createElement("option");
+            option.value = u;
+            option.textContent = u;
+            usernameSelect.appendChild(option);
+          });
+
+  const firstMatch = allUsers.find(u => u.toLowerCase().includes(value));
+  loadPurchaseReport(firstMatch || "");
+});
+
+// ----------------------
+// Initial load
+// ----------------------
+document.getElementById("adminUsername").textContent = "Admin";
+loadCounts();
+loadPurchaseReport();
+</script>
+
+<style>
+#dashboardGrid > div:hover {
+  box-shadow:0 8px 20px rgba(0,0,0,.1);
+  transform: translateY(-4px);
+  transition:all .2s;
+}
+</style>
+{% endblock %}

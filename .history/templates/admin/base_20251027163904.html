@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f0e6; /* soft cafe background */
+    }
+    nav.navbar {
+      background-color: #6b4f4f; /* coffee brown */
+      color: #fff;
+    }
+    nav.navbar a, nav.navbar span {
+      color: #fff;
+    }
+    nav.navbar a:hover {
+      text-decoration: underline;
+    }
+    .sidebar {
+      background-color: #d9c6b1; /* latte shade */
+      min-height: 100vh;
+    }
+    .sidebar a {
+      display: block;
+      padding: 10px 15px;
+      color: #4b3b3b;
+      font-weight: bold;
+    }
+    .sidebar a:hover {
+      background-color: #c2a98d;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    .content {
+      padding: 20px;
+    }
+    .ml-auto {
+      margin-left: auto !important;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg">
+  <span class="navbar-brand">Mini Mart Admin</span>
+  <div class="ml-auto">
+    <span id="username"></span>
+<a href="/api/auth/logout" class="text-danger">Logout</a>
+
+
+
+  </div>
+</nav>
+
+<div class="d-flex">
+  <div class="sidebar p-3" style="width:200px;">
+    <a href="/admin/dashboard">Dashboard</a>
+    <a href="/admin/products">Products</a>
+    <a href="/admin/categories">Categories</a>
+  </div>
+  <div class="flex-fill content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+(function() {
+    // Run script after DOM is ready
+    const username = localStorage.getItem("username");
+    if (username) {
+        document.getElementById("username").innerText = username;
+    }
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if(logoutBtn){
+        logoutBtn.addEventListener("click", function(e) {
+            e.preventDefault();
+            localStorage.removeItem("jwtToken");
+            localStorage.removeItem("username");
+            localStorage.removeItem("role");
+            window.location.href = "/";
+        });
+    }
+
+    const role = localStorage.getItem("role");
+    if (role !== "admin") {
+        alert("Unauthorized: Admins only");
+        window.location.href = "/";
+    }
+})();
+</script>
+{% endblock %}
+
+</body>
+</html>

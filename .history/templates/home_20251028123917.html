@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Home - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        /*
+            Using an image from picsum.photos for demonstration.
+            Replace with your own image.
+        */
+        --psh-bg-image: url('https://picsum.photos/id/1015/1600/1200');
+        --psh-min-height: 90vh;
+        --psh-padding: 0rem 0rem;
+        --psh-text-color: #ffffff;
+        --psh-overlay-color: rgba(17, 24, 39, 0.5);
+        --psh-cta-bg: #fff;
+        --psh-cta-text-color: #111827;
+        --psh-cta-hover-bg: #f3f4f6;
+    }
+    .parallax-hero {
+        box-sizing: border-box;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        min-height: var(--psh-min-height);
+        padding: var(--psh-padding);
+        width: 100%;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        background-image: var(--psh-bg-image);
+        background-position: center 0;
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+    .parallax-hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--psh-overlay-color);
+        z-index: 1;
+    }
+    .parallax-hero * {
+         box-sizing: border-box;
+    }
+    .psh-content {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+        color: var(--psh-text-color);
+    }
+    .psh-content .title {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0 0 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .psh-content .subtitle {
+        font-size: clamp(1.1rem, 3vw, 1.25rem);
+        margin: 0 0 2rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .psh-content .cta {
+        display: inline-block;
+        background-color: var(--psh-cta-bg);
+        color: var(--psh-cta-text-color);
+        padding: 0.9rem 2.2rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 1.05rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .psh-content .cta:hover {
+        background-color: var(--psh-cta-hover-bg);
+    }
+
+    /* Extra content section for demonstrating the scroll effect */
+    .scroll-demo-content {
+        height: 100vh; /* Ensures a lot of scroll space */
+        padding: 4rem 1.5rem;
+        background-color: #fff;
+        color: #111827;
+    }
+    .scroll-demo-content p {
+        max-width: 700px;
+        margin: 0 auto 1rem;
+        line-height: 1.6;
+    }
+</style>
+
+<!-- 
+======================================================================
+  HTML
+  - Place this in your <body> where you want the component to appear.
+======================================================================
+-->
+<section class="parallax-hero" id="parallax-hero-section">
+    <div class="psh-content">
+        <h1 class="title">A New Perspective</h1>
+        <p class="subtitle">Our innovative approach redefines industry standards, creating solutions that are both powerful and elegant.</p>
+        <a href="#" role="button" class="cta">Learn More About Us</a>
+    </div>
+</section>
+
+<!-- This section is just for demonstration to create scroll space -->
+<section class="scroll-demo-content">
+    <p>Scroll down to see the true parallax effect in action. Notice how the content in this section scrolls normally, while the background image of the hero above scrolls up at a slower speed.</p>
+    <p>This is achieved with a small JavaScript snippet that adjusts the background's vertical position based on your scroll position.</p>
+</section>
+
+<!-- 
+======================================================================
+  JavaScript
+  - Place this right before your closing </body> tag.
+======================================================================
+-->
+<script>
+(function() {
+    const parallaxSection = document.getElementById('parallax-hero-section');
+    if (!parallaxSection) return;
+
+    // --- Configuration ---
+    const parallaxSpeed = 0.5; // Set speed factor. 0.5 means it scrolls at half the speed.
+    // --- End Configuration ---
+
+    window.addEventListener('scroll', function() {
+        const offset = window.pageYOffset;
+        parallaxSection.style.backgroundPositionY = offset * parallaxSpeed + 'px';
+    });
+})();
+</script>
+{% endblock %}

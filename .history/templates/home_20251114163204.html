@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Home - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --psh-bg-image: url('https://picsum.photos/id/1015/1600/1200');
+    --psh-min-height: 90vh;
+    --psh-text-color: #ffffff;
+    --psh-overlay-color: rgba(17,24,39,0.5);
+    --psh-cta-bg: #4f46e5;
+    --psh-cta-text: #ffffff;
+    --psh-cta-hover: #6366f1;
+  }
+
+  .parallax-hero{
+    min-height:var(--psh-min-height);
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    background:var(--psh-bg-image) center/cover no-repeat;
+    margin-top:-70px;
+    font-family:'DM Sans',sans-serif;
+  }
+  .parallax-hero::before{
+    content:'';position:absolute;inset:0;
+    background:var(--psh-overlay-color);z-index:1;
+  }
+  .psh-content{
+    position:relative;z-index:2;max-width:900px;color:var(--psh-text-color);
+  }
+  .psh-content .title{
+    font-size:clamp(2.5rem,6vw,4.5rem);
+    font-weight:700;line-height:1.1;margin:0 0 1rem;
+    text-shadow:0 2px 4px rgba(0,0,0,.2);
+  }
+  .psh-content .subtitle{
+    font-size:clamp(1.1rem,3vw,1.25rem);
+    margin:0 auto 2rem;max-width:700px;
+  }
+  .psh-content .cta{
+    display:inline-block;background:var(--psh-cta-bg);
+    color:var(--psh-cta-text);padding:.75rem 2rem;
+    border-radius:50px;font-weight:700;font-size:1rem;
+    text-decoration:none;transition:all .2s ease;
+  }
+  .psh-content .cta:hover{
+    background:var(--psh-cta-hover);
+    box-shadow:0 4px 12px rgba(79,70,229,.3);
+    transform:translateY(-1px);
+  }
+
+  .section-title{
+    text-align:center;font-size:2rem;font-weight:700;
+    color:#1d1d1f;margin:3rem 0 2rem;
+  }
+
+.cards-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  justify-content: center; /* center the grid horizontally */
+  gap: 1.5rem;
+  padding: 0 2rem;
+  max-width: 1200px;
+  margin: 0 auto 4rem;
+}
+
+  .product-card{
+    background:#fff;border-radius:12px;overflow:hidden;
+    box-shadow:0 4px 6px -1px rgba(0,0,0,.07),0 2px 4px -2px rgba(0,0,0,.07);
+    transition:all .2s ease;display:flex;flex-direction:column;
+  }
+  .product-card:hover{
+    transform:translateY(-5px);
+    box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);
+  }
+  .product-card-link{flex:1;display:flex;flex-direction:column;color:inherit;text-decoration:none;}
+  .product-card-image-container{height:240px;overflow:hidden;background:#f8f9fa;}
+  .product-card-image{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+  .product-card:hover .product-card-image{transform:scale(1.05);}
+  .product-card-content{padding:1rem 1.25rem;flex:1;}
+  .product-card-category{font-size:.8rem;color:#5f5f65;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;}
+  .product-card-title{font-size:1.1rem;font-weight:600;color:#1d1d1f;margin:0;line-height:1.4;}
+  .product-card-footer{display:flex;justify-content:space-between;align-items:center;
+    padding:1rem 1.25rem;border-top:1px solid #e9ecef;margin-top:auto;}
+  .product-card-price{font-size:1.2rem;font-weight:700;color:#1d1d1f;}
+  .product-card-cta{
+    background:#4f46e5;color:#fff;border:none;padding:.6rem 1rem;
+    border-radius:50px;font-weight:700;font-size:.9rem;cursor:pointer;
+    transition:all .2s ease;
+  }
+  .product-card-cta:hover{
+    background:#6366f1;box-shadow:0 4px 12px rgba(79,70,229,.3);
+    transform:translateY(-1px);
+  }
+
+    @media(max-width:1024px){
+    .cards-grid-container{grid-template-columns:repeat(2, 1fr);}
+    }
+    @media(max-width:768px){
+    .cards-grid-container{grid-template-columns:1fr;padding:0 1.5rem;}
+    }
+</style>
+
+<!-- HERO -->
+<section class="parallax-hero" id="parallax-hero-section">
+  <div class="psh-content">
+    <h1 class="title">Welcome to Mini Mart</h1>
+    <p class="subtitle">Quality products, fast delivery, unbeatable prices.</p>
+    <a href="/shop" class="cta">Shop Now</a>
+  </div>
+</section>
+
+<h2 class="section-title">Featured Items</h2>
+<div class="cards-grid-container" id="product-list">
+  <p style="text-align:center;color:#666;font-style:italic;">Loading products...</p>
+</div>
+
+<script>
+/* ========== XSS-safe HTML escape ========== */
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/* ========== Add to Cart (placeholder) ========== */
+function addToCart(id) {
+  alert(`Added product ${id} to cart!`);
+  // Later: POST /api/cart/add
+}
+
+/* ========== Load Featured Products ========== */
+async function loadFeatured() {
+  const container = document.getElementById('product-list');
+  container.innerHTML = '<p style="text-align:center;color:#666;font-style:italic;">Loading products...</p>';
+
+  try {
+    // ✅ Use absolute URL to avoid 404
+    const res = await fetch('http://127.0.0.1:5000/api/products'); // ✅ no trailing slash
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const products = await res.json();
+    const featured = products.slice(0, 4); // Show first 4
+
+    container.innerHTML = ''; // Clear loading
+
+    if (featured.length === 0) {
+      container.innerHTML = '<p style="text-align:center;color:#888;">No products available yet.</p>';
+      return;
+    }
+
+    featured.forEach(p => {
+      const imgSrc = p.image
+        ? `http://127.0.0.1:5000/static/images/${p.image}`
+        : 'http://127.0.0.1:5000/static/images/placeholder.jpg';
+
+      const cardHTML = `
+        <article class="product-card">
+          <a href="/product/${p.id}" class="product-card-link">
+            <div class="product-card-image-container">
+              <img src="${imgSrc}"
+                   alt="${escapeHtml(p.name)}"
+                   class="product-card-image"
+                   onerror="this.onerror=null;this.src='http://127.0.0.1:5000/static/images/placeholder.jpg';">
+            </div>
+            <div class="product-card-content">
+              <span class="product-card-category">${escapeHtml(p.category_name || 'Uncategorized')}</span>
+              <h3 class="product-card-title">${escapeHtml(p.name)}</h3>
+            </div>
+          </a>
+          <footer class="product-card-footer">
+            <span class="product-card-price">$${Number(p.price).toFixed(2)}</span>
+            <button class="product-card-cta" onclick="addToCart(${p.id})">
+              Add to Cart
+            </button>
+          </footer>
+        </article>
+      `;
+      container.insertAdjacentHTML('beforeend', cardHTML);
+    });
+
+  } catch (err) {
+    console.error('Failed to load products:', err);
+    container.innerHTML = '<p style="text-align:center;color:#c00;">Failed to load products. Please try again later.</p>';
+  }
+
+  /* ========== Parallax Effect (smooth) ========== */
+  (function () {
+    const hero = document.getElementById('parallax-hero-section');
+    if (!hero) return;
+
+    let ticking = false;
+    function updateParallax() {
+      const y = window.pageYOffset;
+      hero.style.backgroundPositionY = `${y * 0.5}px`;
+      ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateParallax);
+        ticking = true;
+      }
+    });
+  })();
+}
+
+/* ========== Run on page load ========== */
+document.addEventListener('DOMContentLoaded', loadFeatured);
+</script>
+
+{% endblock %}

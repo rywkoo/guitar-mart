@@ -1,0 +1,41 @@
+<div style="text-align:center;margin-top:3rem;">
+  <button id="checkoutBtn" style="padding:1rem 2rem;background:var(--color-primary);color:white;border:none;border-radius:12px;font-weight:700;cursor:pointer;">
+    Place Order
+  </button>
+</div>
+
+<div id="checkoutSuccess" style="display:none;text-align:center;margin-top:2rem;color:green;font-weight:600;">
+  ✅ Your order has been placed! Check your email for the invoice.
+</div>
+
+<script>
+document.getElementById("checkoutBtn").addEventListener("click", async () => {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  if (!cart.length) return alert("Your cart is empty!");
+
+  try {
+    const token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
+    const res = await fetch("/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ cart })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById("checkoutBtn").style.display = "none";
+      document.getElementById("checkoutSuccess").style.display = "block";
+      localStorage.removeItem("cart");
+      window.updateCartCount();
+    } else {
+      alert(data.msg || "Checkout failed");
+    }
+  } catch(err) {
+    console.error(err);
+    alert("Checkout failed. Try again later.");
+  }
+});
+</script>

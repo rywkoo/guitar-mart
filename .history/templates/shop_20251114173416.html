@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:1rem; padding:2rem; flex-wrap:wrap;">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" style="width:250px; position:sticky; top:calc(var(--navbar-height) + 1rem); border:1px solid var(--color-border); padding:1rem; border-radius:var(--radius-md); background:var(--color-bg); height:max-content;">
+    <h2 style="font-size:1.25rem; margin-bottom:1rem; font-weight:600;">Filter Products</h2>
+    
+    <!-- Search -->
+    <input type="text" id="searchInput" placeholder="Search name or category..." 
+           style="width:100%; padding:.5rem; margin-bottom:1rem; border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+
+    <!-- Price -->
+    <label style="display:block; margin-bottom:.25rem;">Max Price: <span id="priceValue"></span></label>
+    <input type="range" id="priceSlider" min="0" max="1000" step="1" value="1000" style="width:100%; margin-bottom:1rem;">
+
+    <!-- Categories -->
+    <div id="categoryFilters" style="margin-bottom:1rem;">
+      <strong>Categories:</strong><br>
+      <!-- dynamically filled -->
+    </div>
+  </aside>
+
+  <!-- Product Grid -->
+  <div id="productGrid" style="flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem;">
+    <!-- Product cards inserted here by JS -->
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allProducts = [];
+let allCategories = [];
+
+// ---------- FETCH PRODUCTS ----------
+async function fetchProducts() {
+  try {
+    const res = await fetch('/api/products');
+    allProducts = await res.json();
+    console.log('All Products:', allProducts); // check fetched data
+
+    // Get unique categories from products
+    const categoriesMap = {};
+    allProducts.forEach(p => {
+      if (p.category_id) categoriesMap[p.category_id] = p.category_name;
+    });
+    allCategories = Object.entries(categoriesMap).map(([id, name]) => ({
+      id: Number(id),
+      name
+    }));
+
+    renderCategories();
+    renderProducts();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ---------- RENDER CATEGORY FILTERS ----------
+function renderCategories() {
+  const container = document.getElementById('categoryFilters');
+  container.innerHTML = '';
+
+  // Add "All" checkbox (default)
+  const allLabel = document.createElement('label');
+  allLabel.style.display = 'block';
+  allLabel.style.marginBottom = '.25rem';
+  allLabel.innerHTML = `<input type="checkbox" class="categoryCheckbox" value="all" checked> All Categories`;
+  container.appendChild(allLabel);
+
+  // Add actual categories
+  allCategories.forEach(cat => {
+    const label = document.createElement('label');
+    label.style.display = 'block';
+    label.style.marginBottom = '.25rem';
+    label.innerHTML = `<input type="checkbox" class="categoryCheckbox" value="${cat.id}" checked> ${cat.name}`;
+    container.appendChild(label);
+  });
+
+  // Add "Uncategorized" if any product has no category
+  const hasUncat = allProducts.some(p => !p.category_id);
+  if (hasUncat) {
+    const label = document.createElement('label');
+    label.style.display = 'block';
+    label.style.marginBottom = '.25rem';
+    label.innerHTML = `<input type="checkbox" class="categoryCheckbox" value="0" checked> Uncategorized`;
+    container.appendChild(label);
+  }
+
+  // Attach change event
+  const checkboxes = document.querySelectorAll('.categoryCheckbox');
+  checkboxes.forEach(cb => cb.addEventListener('change', renderProducts));
+}
+
+// ---------- RENDER PRODUCTS ----------
+function renderProducts() {
+  const container = document.getElementById('productsContainer');
+  container.innerHTML = '';
+
+  const searchInput = document.getElementById('searchInput').value.toLowerCase();
+  const priceSlider = Number(document.getElementById('priceSlider').value);
+
+  // Get checked categories
+  const checkedCategories = Array.from(document.querySelectorAll('.categoryCheckbox:checked'))
+    .map(c => c.value);
+
+  allProducts.forEach(p => {
+    // --- SEARCH FILTER ---
+    const matchesSearch = p.name.toLowerCase().includes(searchInput) || 
+                          (p.category_name && p.category_name.toLowerCase().includes(searchInput));
+
+    // --- CATEGORY FILTER ---
+    const matchesCategory = checkedCategories.includes('all') ||
+      (p.category_id === null && checkedCategories.includes('0')) ||
+      (p.category_id !== null && checkedCategories.includes(String(p.category_id)));
+
+    // --- PRICE FILTER ---
+    const matchesPrice = p.price <= priceSlider;
+
+    if (matchesSearch && matchesCategory && matchesPrice) {
+      const card = document.createElement('div');
+      card.style.border = '1px solid #e9ecef';
+      card.style.borderRadius = '12px';
+      card.style.padding = '1rem';
+      card.style.marginBottom = '1rem';
+      card.style.background = '#fff';
+      card.style.boxShadow = '0 2px 6px rgba(0,0,0,0.05)';
+
+      card.innerHTML = `
+        <img src="/uploads/${p.image || 'placeholder.png'}" alt="${p.name}" style="width:100%;border-radius:12px 12px 0 0;height:180px;object-fit:cover;">
+        <h3 style="margin:.5rem 0 0;font-size:1rem;font-weight:600;">${p.name}</h3>
+        <p style="margin:.25rem 0;color:#555;font-size:0.85rem;">${p.category_name || 'Uncategorized'}</p>
+        <p style="margin:.25rem 0;font-weight:700;color:#4f46e5;">$${p.price.toFixed(2)}</p>
+        <button style="background:#4f46e5;color:white;border:none;padding:.5rem 1rem;border-radius:8px;cursor:pointer;">Add to Cart</button>
+      `;
+      container.appendChild(card);
+    }
+  });
+}
+
+// ---------- SEARCH & PRICE EVENTS ----------
+document.getElementById('searchInput').addEventListener('input', renderProducts);
+document.getElementById('priceSlider').addEventListener('input', renderProducts);
+
+// ---------- INITIAL FETCH ----------
+fetchProducts();
+</script>
+
+{% endblock %}

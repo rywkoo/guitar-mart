@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Register - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    font-family: "DM Sans", sans-serif;
+    background-color: #f9fafb;
+    color: #1d1d1f;
+  }
+
+  .register-container {
+    max-width: 400px;
+    margin: 5rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+    text-align: center;
+  }
+
+  .register-container h2 {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #1d1d1f;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+    transition: border 0.2s;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: #4f46e5;
+  }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .input-group input {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .small-btn {
+    background-color: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .small-btn:hover {
+    background-color: #e0e7ff;
+    border-color: #a5b4fc;
+    transform: translateY(-1px);
+  }
+
+  .small-btn:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    border-color: #d1d5db;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  button[type="submit"] {
+    background-color: #4f46e5;
+    color: #fff;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+  }
+
+  button[type="submit"]:hover {
+    background-color: #4338ca;
+    transform: translateY(-1px);
+  }
+
+  button[type="submit"]:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .msg {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    min-height: 1.5rem;
+  }
+
+  .msg.success { color: #16a34a; }
+  .msg.error { color: #dc2626; }
+
+  .login-link {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #5f5f65;
+  }
+
+  .login-link a {
+    color: #4f46e5;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .login-link a:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .input-group {
+      flex-direction: column;
+    }
+    .small-btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="register-container">
+  <h2>Create an Account</h2>
+
+  <form id="registerForm">
+    <input type="text" name="username" placeholder="Username" required autocomplete="username">
+    <input type="password" name="password" placeholder="Password" required autocomplete="new-password">
+
+    <div class="input-group">
+      <input type="email" name="email" placeholder="Email" required autocomplete="email">
+      <button type="button" id="sendTokenBtn" class="small-btn">Send Code</button>
+    </div>
+    <div id="tokenMessage" class="msg"></div>
+
+    <input type="text" name="token" placeholder="6-Digit Code" maxlength="6" required autocomplete="off">
+
+    <button type="submit">Register</button>
+    <div id="registerMessage" class="msg"></div>
+  </form>
+
+  <div class="login-link">
+    Already have an account? <a href="/login">Login here</a>
+  </div>
+</div>
+
+<script>
+  const sendTokenBtn = document.getElementById('sendTokenBtn');
+  const tokenMessage = document.getElementById('tokenMessage');
+  const registerForm = document.getElementById('registerForm');
+  const registerMessage = document.getElementById('registerMessage');
+
+  // Disable button helper
+  function disableBtn(btn, disabled = true) {
+    btn.disabled = disabled;
+    btn.style.opacity = disabled ? "0.6" : "1";
+  }
+
+  // Message helpers
+  function setMsg(el, text, type = "error") {
+    el.textContent = text;
+    el.className = `msg ${type}`;
+  }
+
+  sendTokenBtn.addEventListener('click', async () => {
+    setMsg(tokenMessage, '');
+    const email = registerForm.email.value.trim();
+    if (!email) return setMsg(tokenMessage, 'Email is required.');
+
+    disableBtn(sendTokenBtn);
+    setMsg(tokenMessage, 'Sending code...', '');
+
+    try {
+      const res = await fetch('/api/auth/send_register_token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const result = await res.json();
+
+      if (res.ok) {
+        setMsg(tokenMessage, 'Verification code sent! Check your email.', 'success');
+      } else {
+        setMsg(tokenMessage, result.error || result.message || 'Failed to send code.');
+      }
+    } catch (err) {
+      setMsg(tokenMessage, 'Network error: ' + err.message);
+    } finally {
+      disableBtn(sendTokenBtn, false);
+    }
+  });
+
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setMsg(registerMessage, '');
+    disableBtn(registerForm.querySelector('button[type="submit"]'));
+
+    const data = {
+      username: registerForm.username.value.trim(),
+      password: registerForm.password.value,
+      email: registerForm.email.value.trim().toLowerCase(),
+      token: registerForm.token.value.trim()
+    };
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+
+      if (res.ok) {
+        setMsg(registerMessage, 'Account created! Redirecting to login...', 'success');
+        setTimeout(() => window.location.href = '/login', 1500);
+      } else {
+        setMsg(registerMessage, result.error || result.message || 'Registration failed');
+      }
+    } catch (err) {
+      setMsg(registerMessage, 'Network error: ' + err.message);
+    } finally {
+      disableBtn(registerForm.querySelector('button[type="submit"]'), false);
+    }
+  });
+
+  // Auto-focus token input when typing
+  registerForm.token.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+  });
+</script>
+{% endblock %}

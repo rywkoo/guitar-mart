@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <span class="navbar-brand">Mini Mart Admin</span>
+  <div class="ml-auto">
+    <span id="username"></span>
+    <button id="logoutBtn" class="btn btn-outline-danger btn-sm ml-2">Logout</button>
+  </div>
+</nav>
+<div class="d-flex">
+  <div class="bg-light p-3" style="width:200px; min-height:100vh;">
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="/admin/dashboard">Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/products">Products</a></li>
+      <li class="nav-item"><a class="nav-link" href="/admin/categories">Categories</a></li>
+    </ul>
+  </div>
+  <div class="flex-fill p-3">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+  // Check admin access
+  async function checkAdmin() {
+    try {
+      const res = await fetch("/api/admin/check", {
+        method: "GET",
+        credentials: "include"  // send cookies
+      });
+      if (!res.ok) {
+        alert("Unauthorized: Admins only");
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        // Show username if returned by API
+        if(data.username) {
+          document.getElementById("username").innerText = data.username;
+        }
+      }
+    } catch(err) {
+      console.error(err);
+      alert("Error verifying admin access");
+      window.location.href = "/";
+    }
+  }
+  checkAdmin();
+
+  // Logout button
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn){
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include" // send JWT cookie
+        });
+        const data = await res.json();
+        console.log(data.message);
+        window.location.href = "/login";
+      } catch(err) {
+        console.error("Logout error:", err);
+      }
+    });
+  }
+</script>
+{% endblock %}
+</body>
+</html>

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Home - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --psh-bg-image: url('/static/images/hero-bg.jpg'); /* Replace with your own hero image */
+        --psh-min-height: 90vh;
+        --psh-padding: 3rem 1.5rem;
+        --psh-text-color: #ffffff;
+        --psh-overlay-color: rgba(17, 24, 39, 0.55);
+        --psh-cta-bg: #ffffff;
+        --psh-cta-text-color: #111827;
+        --psh-cta-hover-bg: #f3f4f6;
+    }
+
+    .parallax-hero {
+        box-sizing: border-box;
+        min-height: var(--psh-min-height);
+        padding: var(--psh-padding);
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        background-image: var(--psh-bg-image);
+        background-position: center 0;
+        background-repeat: no-repeat;
+        background-size: cover;
+        overflow: hidden;
+    }
+
+    .parallax-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-color: var(--psh-overlay-color);
+        z-index: 1;
+    }
+
+    .psh-content {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+        color: var(--psh-text-color);
+    }
+
+    .psh-content .title {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    }
+
+    .psh-content .subtitle {
+        font-size: clamp(1.1rem, 3vw, 1.25rem);
+        margin: 0 auto 2rem;
+        max-width: 700px;
+        line-height: 1.6;
+    }
+
+    .psh-content .cta {
+        display: inline-block;
+        background-color: var(--psh-cta-bg);
+        color: var(--psh-cta-text-color);
+        padding: 0.9rem 2.2rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 1.05rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .psh-content .cta:hover {
+        background-color: var(--psh-cta-hover-bg);
+        transform: translateY(-3px);
+    }
+
+    .scroll-demo-content {
+        padding: 4rem 1.5rem;
+        background-color: #fff;
+        color: #111827;
+        text-align: center;
+    }
+
+    .scroll-demo-content h2 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .scroll-demo-content p {
+        max-width: 700px;
+        margin: 0 auto 1rem;
+        line-height: 1.7;
+        color: #374151;
+    }
+
+    @media (max-width: 768px) {
+        .psh-content .title {
+            font-size: 2.5rem;
+        }
+        .psh-content .subtitle {
+            font-size: 1rem;
+        }
+    }
+</style>
+
+<!-- Hero Section -->
+<section class="parallax-hero" id="parallax-hero-section">
+    <div class="psh-content">
+        <h1 class="title">Welcome to Mini Mart</h1>
+        <p class="subtitle">
+            Discover quality products, daily essentials, and beauty picks — all in one place.
+        </p>
+        <a href="/shop" role="button" class="cta">Shop Now</a>
+    </div>
+</section>
+
+<!-- Scroll Section -->
+<section class="scroll-demo-content">
+    <h2>Shop Smarter with Mini Mart</h2>
+    <p>
+        Experience a modern way to shop your favorite products. Scroll through our catalog, 
+        explore categories, and check out our weekly bestsellers.
+    </p>
+    <p>
+        We bring you top-quality goods at affordable prices, delivered right to your doorstep.
+    </p>
+</section>
+
+<script>
+(function() {
+    const parallaxSection = document.getElementById('parallax-hero-section');
+    if (!parallaxSection) return;
+
+    const parallaxSpeed = 0.5; // Lower = slower background scroll
+    window.addEventListener('scroll', function() {
+        const offset = window.pageYOffset;
+        parallaxSection.style.backgroundPositionY = offset * parallaxSpeed + 'px';
+    });
+})();
+</script>
+{% endblock %}

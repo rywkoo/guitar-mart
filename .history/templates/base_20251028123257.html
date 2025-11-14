@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Mini Mart{% endblock %}</title>
+    <style>
+        :root {
+            --color-background: #ffffff;
+            --color-surface: #f8f9fa;
+            --color-text-primary: #212529;
+            --color-text-secondary: #495057;
+            --color-primary: #0056b3;
+            --color-border: #e9ecef;
+            --font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-weight-bold: 600;
+            --navbar-height: 80px;
+            --navbar-padding: 1.5rem;
+            --container-width: 1200px;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; font-family: var(--font-family-sans-serif); line-height: 1.6; background-color: var(--color-surface); color: var(--color-text-primary); }
+
+        .content { max-width: var(--container-width); margin: 0 auto; padding: 120px var(--navbar-padding); }
+
+        ul { list-style: none; margin: 0; padding: 0; }
+        a { text-decoration: none; color: var(--color-text-secondary); transition: color var(--transition-speed) ease; }
+        a:hover, a:focus { color: var(--color-primary); }
+
+        .navbar { position: sticky; top: 0; z-index: 1000; height: var(--navbar-height); display: flex; align-items: center; background-color: var(--color-background); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .navbar__container { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: var(--container-width); margin: 0 auto; padding: 0 var(--navbar-padding); }
+        .navbar__brand { font-size: 1.75rem; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+        .navbar__toggle { display: block; border: 1px solid var(--color-border); border-radius: 4px; padding: 0.25rem 0.75rem; background: transparent; cursor: pointer; }
+        .navbar__toggle .bar { display: block; width: 22px; height: 2px; margin: 6px 0; background-color: var(--color-text-primary); transition: transform var(--transition-speed) ease; }
+        .navbar__toggle.is-active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .navbar__toggle.is-active .bar:nth-child(2) { opacity: 0; }
+        .navbar__toggle.is-active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        .navbar__menu { display: none; }
+        .navbar__menu.is-active { display: block; position: absolute; top: var(--navbar-height); left: 0; width: 100%; background-color: var(--color-background); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .navbar__item > .navbar__link { display: flex; align-items: center; padding: 1.25rem var(--navbar-padding); font-weight: var(--font-weight-bold); }
+        .navbar__item:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+
+        @media (min-width: 992px) {
+            .navbar__toggle { display: none; }
+            .navbar__menu { display: flex; align-items: center; position: static; width: auto; background: none; box-shadow: none; }
+            .navbar__list { display: flex; align-items: center; gap: 1rem; }
+            .navbar__item, .navbar__item:not(:last-child) { border: none; }
+            .navbar__item > .navbar__link { padding: 0.5rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <div class="navbar__container">
+            <a href="/" class="navbar__brand">Mini Mart</a>
+            <button class="navbar__toggle" id="navbarToggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+            <nav id="navbarMenu" class="navbar__menu" role="navigation">
+                <ul class="navbar__list">
+                    <li class="navbar__item"><a href="/" class="navbar__link">Home</a></li>
+                    <li class="navbar__item"><a href="/shop" class="navbar__link">Shop</a></li>
+                    <li class="navbar__item"><a href="/about" class="navbar__link">About</a></li>
+                    <li class="navbar__item"><a href="/contact" class="navbar__link">Contact</a></li>
+                    <li class="navbar__item"><a href="/login" class="navbar__link">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navbarToggle = document.getElementById('navbarToggle');
+            const navbarMenu = document.getElementById('navbarMenu');
+            if (navbarToggle) {
+                navbarToggle.addEventListener('click', function() {
+                    navbarToggle.classList.toggle('is-active');
+                    navbarMenu.classList.toggle('is-active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

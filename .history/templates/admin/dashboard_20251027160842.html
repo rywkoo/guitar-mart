@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<p>Welcome to the admin dashboard. Manage products and categories here.</p>
+
+<div class="row mt-4">
+  <div class="col-md-4">
+    <div class="card text-white bg-primary mb-3">
+      <div class="card-header">Total Products</div>
+      <div class="card-body">
+        <h5 class="card-title" id="totalProducts">0</h5>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-success mb-3">
+      <div class="card-header">Total Categories</div>
+      <div class="card-body">
+        <h5 class="card-title" id="totalCategories">0</h5>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const token = localStorage.getItem("jwtToken");
+
+// Example: Fetch counts using API
+async function loadCounts() {
+  const headers = { "Authorization": "Bearer " + token };
+  
+  const productsRes = await fetch("/api/products/", { headers });
+  const products = await productsRes.json();
+  document.getElementById("totalProducts").innerText = products.length;
+
+  const categoriesRes = await fetch("/api/categories/", { headers });
+  const categories = await categoriesRes.json();
+  document.getElementById("totalCategories").innerText = categories.length;
+}
+loadCounts();
+</script>
+{% endblock %}

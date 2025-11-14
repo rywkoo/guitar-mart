@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1.5rem;">Dashboard</h1>
+<p class="text-muted">Welcome, <span id="adminUsername">Admin</span>. Manage your store from here.</p>
+
+<div id="dashboardGrid" style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1.5rem;
+    margin-top:1rem;
+">
+  <!-- Cards loaded via JS -->
+</div>
+
+<!-- Quick Actions -->
+<div style="margin-top:2rem;display:flex;gap:1rem;flex-wrap:wrap;">
+  <a href="/admin/products" style="padding:.6rem 1.2rem;border-radius:12px;border:none;background:#4f46e5;color:#fff;font-weight:700;cursor:pointer;transition:all .2s;">
+    <i class="fas fa-cube me-1"></i> Manage Products
+  </a>
+  <a href="/admin/users" style="padding:.6rem 1.2rem;border-radius:12px;border:none;background:#0ea5e9;color:#fff;font-weight:700;cursor:pointer;transition:all .2s;">
+    <i class="fas fa-user-cog me-1"></i> Manage Users
+  </a>
+  <button onclick="loadCounts()" style="padding:.6rem 1.2rem;border-radius:12px;border:none;background:#64748b;color:#fff;font-weight:700;cursor:pointer;transition:all .2s;">
+    <i class="fas fa-sync-alt me-1"></i> Refresh Stats
+  </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCounts() {
+  try {
+    const headers = { "Accept": "application/json" };
+
+    // Fetch all counts from admin APIs
+    const [products, categories, users] = await Promise.all([
+      fetch("/admin/api/products", { headers }).then(r => r.json()),
+      fetch("/admin/api/categories", { headers }).then(r => r.json()),
+      fetch("/admin/api/users", { headers }).then(r => r.json())
+    ]);
+
+    const grid = document.getElementById("dashboardGrid");
+    grid.innerHTML = `
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Products</div>
+        <h2 style="margin-top:.5rem;color:#4f46e5;">${products.length}</h2>
+        <small class="text-muted">Active items in catalog</small>
+      </div>
+
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Categories</div>
+        <h2 style="margin-top:.5rem;color:#16a34a;">${categories.length}</h2>
+        <small class="text-muted">Product groupings</small>
+      </div>
+
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.05);transition:all .2s;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Users</div>
+        <h2 style="margin-top:.5rem;color:#0ea5e9;">${users.length}</h2>
+        <small class="text-muted">Registered accounts</small>
+      </div>
+    `;
+
+    // Add hover effect like product/user cards
+    Array.from(grid.children).forEach(card => {
+      card.onmouseover = () => card.style.transform = 'translateY(-4px)';
+      card.onmouseout = () => card.style.transform = 'translateY(0)';
+    });
+  } catch (err) {
+    console.error(err);
+    document.getElementById("dashboardGrid").innerHTML = `<p style="grid-column:1/-1;text-align:center;color:#f87171;">Failed to load stats</p>`;
+  }
+}
+
+// Show username from JWT
+document.getElementById("adminUsername").textContent = "Admin";
+
+loadCounts();
+</script>
+
+<style>
+/* Card hover effect */
+#dashboardGrid > div:hover {
+  box-shadow:0 8px 20px rgba(0,0,0,.1);
+  transition:all .2s;
+}
+</style>
+{% endblock %}

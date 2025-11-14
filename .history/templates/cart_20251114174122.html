@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Shopping Cart - Mini Mart{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px; margin:2rem auto; padding:0 1rem;">
+
+  <h1 style="font-size:2rem; font-weight:700; margin-bottom:2rem; text-align:center;">Your Cart</h1>
+
+  <div style="display:flex; flex-wrap:wrap; gap:2rem;">
+
+    <!-- Cart Items -->
+    <div style="flex: 2; min-width:300px;">
+      
+      <!-- Item 1 -->
+      <div style="display:flex; gap:1rem; background:#fff; padding:1rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05); margin-bottom:1.5rem; align-items:center;">
+        <img src="/static/images/guitar.jpg" alt="Acoustic Guitar" style="width:120px; height:120px; object-fit:cover; border-radius:12px;">
+        <div style="flex:1;">
+          <h3 style="margin:0 0 0.5rem; font-size:1.1rem; font-weight:600;">Acoustic Guitar</h3>
+          <p style="margin:0; color:#555;">Category: String Instruments</p>
+          <p style="margin:0.5rem 0 0; font-weight:600;">$199.99</p>
+          <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.9rem; color:#555;">Qty:</label>
+            <input type="number" value="1" min="1" style="width:60px; padding:0.3rem; border:1px solid #ced4da; border-radius:6px;">
+          </div>
+        </div>
+        <button style="background:#ff4757; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.2s;">Remove</button>
+      </div>
+
+      <!-- Item 2 -->
+      <div style="display:flex; gap:1rem; background:#fff; padding:1rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05); margin-bottom:1.5rem; align-items:center;">
+        <img src="/static/images/keyboard.jpg" alt="Digital Keyboard" style="width:120px; height:120px; object-fit:cover; border-radius:12px;">
+        <div style="flex:1;">
+          <h3 style="margin:0 0 0.5rem; font-size:1.1rem; font-weight:600;">Digital Keyboard</h3>
+          <p style="margin:0; color:#555;">Category: Keyboards</p>
+          <p style="margin:0.5rem 0 0; font-weight:600;">$349.99</p>
+          <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.9rem; color:#555;">Qty:</label>
+            <input type="number" value="1" min="1" style="width:60px; padding:0.3rem; border:1px solid #ced4da; border-radius:6px;">
+          </div>
+        </div>
+        <button style="background:#ff4757; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.2s;">Remove</button>
+      </div>
+
+      <!-- Item 3 -->
+      <div style="display:flex; gap:1rem; background:#fff; padding:1rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05); margin-bottom:1.5rem; align-items:center;">
+        <img src="/static/images/drum.jpg" alt="Drum Set" style="width:120px; height:120px; object-fit:cover; border-radius:12px;">
+        <div style="flex:1;">
+          <h3 style="margin:0 0 0.5rem; font-size:1.1rem; font-weight:600;">Drum Set</h3>
+          <p style="margin:0; color:#555;">Category: Percussion</p>
+          <p style="margin:0.5rem 0 0; font-weight:600;">$499.99</p>
+          <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+            <label style="font-size:0.9rem; color:#555;">Qty:</label>
+            <input type="number" value="1" min="1" style="width:60px; padding:0.3rem; border:1px solid #ced4da; border-radius:6px;">
+          </div>
+        </div>
+        <button style="background:#ff4757; color:white; border:none; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; font-weight:600; transition:all 0.2s;">Remove</button>
+      </div>
+
+    </div>
+
+    <!-- Cart Summary -->
+    <div style="flex:1; min-width:280px; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.05); height:max-content;">
+      <h2 style="font-size:1.25rem; font-weight:700; margin-bottom:1.5rem;">Order Summary</h2>
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+        <span>Subtotal</span>
+        <span>$1049.97</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+        <span>Tax (5%)</span>
+        <span>$52.50</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1.1rem; margin-top:1rem; margin-bottom:2rem;">
+        <span>Total</span>
+        <span>$1102.47</span>
+      </div>
+      <button style="width:100%; background:#4f46e5; color:white; border:none; padding:0.75rem; font-size:1rem; font-weight:700; border-radius:12px; cursor:pointer; transition:all 0.2s;">
+        Proceed to Checkout
+      </button>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

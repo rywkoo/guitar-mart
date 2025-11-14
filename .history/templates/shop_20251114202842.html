@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:1rem; padding:2rem; flex-wrap:wrap;">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" style="width:250px; position:sticky; top:calc(var(--navbar-height) + 1rem); border:1px solid var(--color-border); padding:1rem; border-radius:var(--radius-md); background:var(--color-bg); height:max-content;">
+    <h2 style="font-size:1.25rem; margin-bottom:1rem; font-weight:600;">Filter Products</h2>
+    
+    <input type="text" id="searchInput" placeholder="Search name or category..." 
+           style="width:100%; padding:.5rem; margin-bottom:1rem; border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+
+    <label style="display:block; margin-bottom:.25rem;">Max Price: <span id="priceValue"></span></label>
+    <input type="range" id="priceSlider" min="0" max="5000" step="1" value="5000" style="width:100%; margin-bottom:1rem;">
+
+    <div id="categoryFilters" style="margin-bottom:1rem;">
+      <strong>Categories:</strong><br>
+    </div>
+  </aside>
+
+  <!-- Product Grid -->
+  <div id="productGrid" style="flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1rem;">
+  </div>
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const authContainer = document.getElementById("authContainer");
+    const menuToggle = document.getElementById("menuToggle");
+    const mobileMenu = document.getElementById("mobileMenu");
+
+    // Mobile menu
+    menuToggle.addEventListener("click", () => mobileMenu.classList.toggle("open"));
+    document.querySelector(".content").addEventListener("click", () => {
+      if (mobileMenu.classList.contains("open")) mobileMenu.classList.remove("open");
+    });
+
+    // === AUTH: Replace Login with Profile Button ===
+    const token = localStorage.getItem("jwtToken") || localStorage.getItem("token");
+
+    if (token) {
+      let username = "User";
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        username = payload.identity || payload.sub || "User";
+      } catch (e) {}
+
+      authContainer.innerHTML = `
+        <div class="profile-dropdown">
+          <button class="profile-btn" id="profileBtn">
+            ${username} <span class="caret">Down Arrow</span>
+          </button>
+          <div id="profileDropdown">
+            <a href="/reset-password">Reset Password</a>
+            <a href="#" id="logoutTrigger">Logout</a>
+          </div>
+        </div>
+      `;
+
+      const profileBtn = document.getElementById("profileBtn");
+      const dropdown = document.getElementById("profileDropdown");
+
+      profileBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        profileBtn.classList.toggle("open");
+        dropdown.classList.toggle("show");
+      });
+
+      document.addEventListener("click", () => {
+        profileBtn.classList.remove("open");
+        dropdown.classList.remove("show");
+      });
+    }
+
+    // === LOGOUT MODAL ===
+    const modal = document.getElementById("logoutModal");
+    const cancelBtn = document.getElementById("cancelLogout");
+    const confirmBtn = document.getElementById("confirmLogout");
+
+    document.body.addEventListener("click", (e) => {
+      if (e.target.id === "logoutTrigger") {
+        e.preventDefault();
+        modal.classList.add("show");
+      }
+    });
+
+    cancelBtn.addEventListener("click", () => modal.classList.remove("show"));
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("show");
+    });
+
+    confirmBtn.addEventListener("click", async () => {
+      try {
+        await fetch("/auth/logout", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+      } catch (e) {}
+      localStorage.clear();
+      window.location.href = "/";
+    });
+  });
+
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  /* ---------- GLOBAL CART BADGE ---------- */
+  function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.querySelectorAll('.cart-link').forEach(link => {
+      let countSpan = link.querySelector('.cart-count');
+      if (!countSpan) {
+        countSpan = document.createElement('sup');
+        countSpan.className = 'cart-count';
+        Object.assign(countSpan.style, {
+          marginLeft: '4px',
+          background: 'var(--color-primary)',
+          color: 'white',
+          borderRadius: '50%',
+          fontSize: '0.7rem',
+          padding: '2px 6px',
+          minWidth: '18px',
+          textAlign: 'center'
+        });
+        link.appendChild(countSpan);
+      }
+      countSpan.textContent = totalItems > 0 ? totalItems : '';
+      countSpan.style.display = totalItems > 0 ? 'inline' : 'none';
+    });
+  }
+
+  window.updateCartCount = updateCartCount;
+  document.addEventListener('DOMContentLoaded', updateCartCount);
+</script>
+{% endblock %}

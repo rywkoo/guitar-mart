@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Register - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+/* Basic styling omitted for brevity, keep your previous CSS */
+.register-container { max-width: 400px; margin: 5rem auto; padding: 2rem; background: #fff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); text-align:center; }
+input { width:100%; padding:0.75rem; margin-bottom:1rem; border-radius:8px; border:1px solid #ddd; }
+button { background-color:#ff4757; color:#fff; border:none; padding:0.75rem; border-radius:50px; font-weight:700; cursor:pointer; width:100%; }
+button:hover { background-color:#e63946; }
+.msg { margin-top:1rem; font-size:0.95rem; }
+.msg.success { color:#16a34a; }
+.msg.error { color:#dc2626; }
+.login-link { margin-top:1.5rem; font-size:0.9rem; color:#5f5f65; }
+.login-link a { color:#ff4757; font-weight:700; text-decoration:none; }
+.login-link a:hover { text-decoration:underline; }
+</style>
+
+<div class="register-container">
+    <h2>Create an Account</h2>
+    <form id="registerForm">
+        <input type="text" name="username" placeholder="Username" required>
+
+        <div style="display:flex; gap:0.5rem;">
+            <input type="email" name="email" placeholder="Email" required style="flex:1;">
+            <button type="button" id="sendTokenBtn">Send Token</button>
+        </div>
+
+        <input type="text" name="token" placeholder="Verification Code" required>
+        <input type="password" name="password" placeholder="Password" required>
+
+        <button type="submit">Register</button>
+        <div id="message" class="msg"></div>
+    </form>
+    <div class="login-link">
+        Already have an account? <a href="/login">Login here</a>
+    </div>
+</div>
+
+<script>
+const form = document.getElementById('registerForm');
+const messageDiv = document.getElementById('message');
+const sendTokenBtn = document.getElementById('sendTokenBtn');
+
+// Send token button
+sendTokenBtn.addEventListener('click', async () => {
+    const email = document.querySelector('input[name="email"]').value.trim();
+    messageDiv.textContent = '';
+    messageDiv.className = 'msg error';
+    if (!email) return messageDiv.textContent = 'Email is required';
+
+    try {
+        const res = await fetch('/api/auth/send_register_token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const result = await res.json();
+        if (res.ok) {
+            messageDiv.className = 'msg success';
+            messageDiv.textContent = 'Verification code sent! Check your email.';
+        } else {
+            messageDiv.textContent = result.error || result.message || 'Failed to send token';
+        }
+    } catch (err) {
+        messageDiv.textContent = 'Network error: ' + err.message;
+    }
+});
+
+// Register submission
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    messageDiv.textContent = '';
+    messageDiv.className = 'msg error';
+
+    const data = {
+        username: form.username.value.trim(),
+        email: form.email.value.trim().toLowerCase(),
+        token: form.token.value.trim(),
+        password: form.password.value
+    };
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            messageDiv.className = 'msg success';
+            messageDiv.textContent = 'Account created! Redirecting to login...';
+            setTimeout(() => window.location.href = '/login', 1500);
+        } else {
+            messageDiv.textContent = result.error || result.message || 'Registration failed';
+        }
+    } catch (err) {
+        messageDiv.textContent = 'Network error: ' + err.message;
+    }
+});
+</script>
+{% endblock %}

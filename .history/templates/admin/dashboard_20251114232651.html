@@ -1,0 +1,392 @@
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+
+<script>
+/* ------------------------------------------------------------------ */
+/* Global State                                                       */
+/* ------------------------------------------------------------------ */
+let mainChart = null;
+let userChart = null;
+let allInvoices = [];
+let filteredInvoices = [];
+let selectedInvoice = null;
+
+/* ------------------------------------------------------------------ */
+/* Load Stats                                                         */
+/* ------------------------------------------------------------------ */
+async function loadCounts() {
+  try {
+    const opts = { credentials: 'include', headers: { Accept: 'application/json' } };
+    const [prodRes, catRes] = await Promise.all([
+      fetch('/admin/api/products', opts),
+      fetch('/admin/api/categories', opts)
+    ]);
+    if (!prodRes.ok || !catRes.ok) throw new Error('API error');
+    const products = await prodRes.json();
+    const categories = await catRes.json();
+
+    const grid = document.getElementById('dashboardGrid');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-title">Total Products</div>
+        <h2 class="stat-value" style="color:#4f46e5;">${products.length}</h2>
+        <small class="text-muted">Active items</small>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Total Categories</div>
+        <h2 class="stat-value" style="color:#16a34a;">${categories.length}</h2>
+        <small class="text-muted">Product groupings</small>
+      </div>
+    `;
+    grid.querySelectorAll('.stat-card').forEach(c => {
+      c.addEventListener('mouseenter', () => c.style.transform = 'translateY(-4px)');
+      c.addEventListener('mouseleave', () => c.style.transform = '');
+    });
+  } catch (e) { console.error('loadCounts →', e); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Load All Invoices                                                  */
+/* ------------------------------------------------------------------ */
+async function loadAllInvoices() {
+  try {
+    const res = await fetch('/admin/api/invoices', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to load invoices');
+    allInvoices = await res.json();
+    filteredInvoices = [...allInvoices];
+
+    loadMainChart();
+    renderInvoiceList();
+    setupSearch();
+
+    if (allInvoices.length > 0) {
+      selectInvoice(allInvoices[0]);
+    }
+  } catch (e) {
+    console.error('loadAllInvoices →', e);
+    document.getElementById('invoiceList').innerHTML =
+      '<p style="color:#dc3545; text-align:center;">Failed to load invoices.</p>';
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* MAIN CHART – DAILY: ONE BAR PER INVOICE                            */
+/* ------------------------------------------------------------------ */
+function loadMainChart() {
+  const type = document.getElementById('mainReportType').value;
+  const start = document.getElementById('mainStartDate').value;
+  const end = document.getElementById('mainEndDate').value;
+
+  let filtered = filterByTime(allInvoices, type, start, end);
+
+  let labels = [];
+  let data = [];
+
+  if (type === 'daily') {
+    // ONE BAR PER INVOICE → sort by time
+    const today = new Date().toDateString();
+    const todayInvoices = filtered.filter(i => new Date(i.created_at).toDateString() === today);
+    todayInvoices.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    labels = todayInvoices.map(i => {
+      const time = new Date(i.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${i.invoice_number}\n${time}`;
+    });
+    data = todayInvoices.map(i => i.total_amount);
+
+  } else if (type === 'weekly') {
+    // LAST 7 DAYS → one bar per day (sum)
+    const days = {};
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toDateString();
+      days[key] = 0;
+    }
+
+    filtered.forEach(inv => {
+      const d = new Date(inv.created_at);
+      const key = d.toDateString();
+      if (days.hasOwnProperty(key)) {
+        days[key] += inv.total_amount;
+      }
+    });
+
+    labels = Object.keys(days).map(k => new Date(k).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+    data = Object.values(days);
+
+  } else {
+    // ALLTIME / MONTHLY / CUSTOM → sum per day
+    const map = {};
+    filtered.forEach(inv => {
+      const date = inv.created_at.split('T')[0];
+      map[date] = (map[date] || 0) + inv.total_amount;
+    });
+
+    const sorted = Object.keys(map).sort();
+    labels = sorted.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    data = sorted.map(d => map[d]);
+  }
+
+  const ctx = document.getElementById('mainPurchaseChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+
+  const isBar = type === 'daily';
+  mainChart = new Chart(ctx, {
+    type: isBar ? 'bar' : 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: isBar ? 'Invoice Amount ($)' : 'Daily Total ($)',
+        data,
+        backgroundColor: isBar ? 'rgba(79,70,229,0.7)' : 'rgba(79,70,229,0.2)',
+        borderColor: '#4f46e5',
+        borderWidth: 2,
+        pointRadius: isBar ? 4 : 5,
+        tension: 0.3,
+        fill: !isBar
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => `$${ctx.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true },
+        x: {
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            autoSkip: false
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* SEARCH + INVOICE LIST                                              */
+/* ------------------------------------------------------------------ */
+function setupSearch() {
+  const searchInput = document.getElementById('invoiceSearch');
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    filteredInvoices = query
+      ? allInvoices.filter(inv =>
+          inv.username.toLowerCase().includes(query) ||
+          inv.invoice_number.toLowerCase().includes(query)
+        )
+      : [...allInvoices];
+    renderInvoiceList();
+  });
+}
+
+function renderInvoiceList() {
+  const container = document.getElementById('invoiceList');
+  container.innerHTML = '';
+
+  const display = filteredInvoices
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 50);
+
+  if (display.length === 0) {
+    container.innerHTML = '<p style="color:#6c757d; text-align:center; padding:1rem;">No invoices found.</p>';
+    return;
+  }
+
+  display.forEach(inv => {
+    const card = document.createElement('div');
+    card.className = 'invoice-card';
+    card.innerHTML = `
+      <div class="invoice-header">
+        <span class="invoice-number">${inv.invoice_number}</span>
+      </div>
+      <div class="invoice-body">
+        <div><strong>User:</strong> ${inv.username}</div>
+        <div><strong>Amount:</strong> <span class="amount">$${Number(inv.total_amount).toFixed(2)}</span></div>
+        <div><strong>Date:</strong> ${new Date(inv.created_at).toLocaleString()}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => selectInvoice(inv));
+    container.appendChild(card);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* SELECT INVOICE → GREEN DOT CHART                                   */
+/* ------------------------------------------------------------------ */
+function selectInvoice(invoice) {
+  selectedInvoice = invoice;
+  document.getElementById('userChartTitle').textContent = `Invoice: ${invoice.invoice_number} – ${invoice.username}`;
+  loadUserChart();
+}
+
+function loadUserChart() {
+  if (!selectedInvoice) {
+    if (userChart) userChart.destroy();
+    const ctx = document.getElementById('userPurchaseChart').getContext('2d');
+    userChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] } });
+    return;
+  }
+
+  const padding = 5;
+  const labels = [];
+  const data = [];
+
+  for (let i = padding; i > 0; i--) {
+    const d = new Date(selectedInvoice.created_at);
+    d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString());
+    data.push(0);
+  }
+
+  labels.push(new Date(selectedInvoice.created_at).toLocaleDateString());
+  data.push(selectedInvoice.total_amount);
+
+  for (let i = 1; i <= padding; i++) {
+    const d = new Date(selectedInvoice.created_at);
+    d.setDate(d.getDate() + i);
+    labels.push(d.toLocaleDateString());
+    data.push(0);
+  }
+
+  const ctx = document.getElementById('userPurchaseChart').getContext('2d');
+  if (userChart) userChart.destroy();
+
+  userChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: `Invoice ${selectedInvoice.invoice_number}`,
+        data,
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22,163,74,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: data.map(v => v > 0 ? 10 : 0),
+        pointBackgroundColor: data.map(v => v > 0 ? '#16a34a' : 'transparent'),
+        pointBorderColor: data.map(v => v > 0 ? '#fff' : 'transparent'),
+        pointBorderWidth: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y > 0 ? `$${ctx.parsed.y.toFixed(2)}` : '' } }
+      },
+      scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 45 } } },
+      onAfterDraw: () => {
+        const chart = userChart;
+        const centerIndex = padding;
+        const pointX = chart.scales.x.getPixelForValue(centerIndex);
+        const container = chart.canvas.parentElement;
+        const target = pointX - container.clientWidth / 2;
+        container.scrollTo({ left: target, behavior: 'smooth' });
+      }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Time Filter Helper                                                 */
+/* ------------------------------------------------------------------ */
+function filterByTime(invoices, type, start = null, end = null) {
+  if (type === 'custom' && start && end) {
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T23:59:59');
+    return invoices.filter(i => {
+      const d = new Date(i.created_at);
+      return d >= s && d <= e;
+    });
+  }
+
+  const now = new Date();
+  return invoices.filter(i => {
+    const d = new Date(i.created_at);
+    if (type === 'daily')   return d.toDateString() === now.toDateString();
+    if (type === 'weekly')  { const w = new Date(now); w.setDate(now.getDate() - 6); return d >= w; }
+    if (type === 'monthly') { const m = new Date(now); m.setMonth(now.getMonth() - 1); return d >= m; }
+    return true; // alltime
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Setup Date Inputs                                                  */
+/* ------------------------------------------------------------------ */
+function setupDateInputs(prefix, isUser = false) {
+  const typeEl = document.getElementById(`${prefix}ReportType`);
+  const startEl = document.getElementById(`${prefix}StartDate`);
+  const endEl = document.getElementById(`${prefix}EndDate`);
+  const reloadFn = isUser ? loadUserChart : loadMainChart;
+
+  typeEl.addEventListener('change', () => {
+    const show = typeEl.value === 'custom';
+    startEl.style.display = show ? 'inline-block' : 'none';
+    endEl.style.display = show ? 'inline-block' : 'none';
+    if (show) {
+      const today = new Date().toISOString().split('T')[0];
+      startEl.value = today;
+      endEl.value = today;
+    }
+    reloadFn();
+  });
+
+  startEl.addEventListener('change', () => { if (typeEl.value === 'custom') reloadFn(); });
+  endEl.addEventListener('change', () => { if (typeEl.value === 'custom') reloadFn(); });
+}
+
+setupDateInputs('main', false);
+setupDateInputs('user', true);
+
+/* ------------------------------------------------------------------ */
+/* Init                                                               */
+/* ------------------------------------------------------------------ */
+document.getElementById('adminUsername').textContent = 'Admin';
+loadCounts();
+loadAllInvoices();
+loadUserChart();
+</script>
+
+<style>
+.stat-card {
+  background:#fff; padding:1.5rem; border-radius:12px; border:1px solid #e9ecef;
+  cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.05);
+  transition:transform .2s, box-shadow .2s;
+}
+.stat-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,.1); }
+.stat-title { font-weight:700; font-size:1.1rem; color:#1d1d1f; }
+.stat-value { margin-top:.5rem; }
+
+.invoice-card {
+  background:#fff;
+  border:1px solid #e9ecef;
+  border-radius:10px;
+  padding:1rem;
+  margin-bottom:.75rem;
+  cursor:pointer;
+  transition:all .2s ease;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.invoice-card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(0,0,0,.1);
+  border-color:#16a34a;
+}
+.invoice-header { font-size:.9rem; margin-bottom:.5rem; }
+.invoice-number { color:#16a34a; font-weight:600; }
+.invoice-body { font-size:.9rem; color:#555; }
+.invoice-body div { margin-bottom:.25rem; }
+.amount { color:#16a34a; font-weight:600; }
+</style>
+{% endblock %}

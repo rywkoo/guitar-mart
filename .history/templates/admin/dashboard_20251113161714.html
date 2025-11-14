@@ -1,0 +1,248 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1rem;">Dashboard</h1>
+<p class="text-muted">Welcome, <span id="adminUsername">Admin</span>. Manage your store and view analytics here.</p>
+
+<div id="dashboardGrid" style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1.5rem;
+    margin-top:1rem;
+">
+  <!-- Stats Cards Loaded via JS -->
+</div>
+
+<!-- ---------- FILTERS & CHARTS ---------- -->
+<div style="margin-top:2rem; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,.05);">
+  <h2 style="font-weight:700;color:#1d1d1f;margin-bottom:1rem;">Purchase Reports</h2>
+
+  <!-- MAIN CHART FILTERS -->
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <input type="text" id="mainUserSearch" placeholder="Search by username..." style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+    <input type="text" id="mainInvoiceSearch" placeholder="Search by invoice #" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+  </div>
+
+  <!-- Main chart -->
+  <canvas id="mainPurchaseChart" style="width:100%;max-height:400px;"></canvas>
+
+  <!-- USER CHART FILTERS -->
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin:2rem 0 1rem 0;">
+    <input type="text" id="userSearch" placeholder="Search username..." style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+    <select id="userReportType" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="alltime">All Time</option>
+    </select>
+  </div>
+
+  <div style="display:flex; gap:2rem;">
+    <div style="flex:1;">
+      <canvas id="userPurchaseChart" style="width:100%;max-height:300px;"></canvas>
+    </div>
+    <div style="flex:1;">
+      <div style="max-height:300px; overflow-y:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="border-bottom:1px solid #ccc;padding:.5rem;text-align:left;">Invoice #</th>
+              <th style="border-bottom:1px solid #ccc;padding:.5rem;text-align:left;">Username</th>
+              <th style="border-bottom:1px solid #ccc;padding:.5rem;text-align:right;">Total ($)</th>
+              <th style="border-bottom:1px solid #ccc;padding:.5rem;text-align:left;">Date</th>
+            </tr>
+          </thead>
+          <tbody id="invoiceTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let mainChart = null;
+let userChart = null;
+let allInvoices = [];
+
+// ----------------------
+// Load dashboard stats
+// ----------------------
+async function loadCounts() {
+  try {
+    const headers = { "Accept": "application/json" };
+    const [products, categories, invoices] = await Promise.all([
+      fetch("/admin/api/products", { headers }).then(r => r.json()),
+      fetch("/admin/api/categories", { headers }).then(r => r.json()),
+      fetch("/admin/api/invoices", { headers }).then(r => r.json())
+    ]);
+    allInvoices = invoices;
+
+    // Load stats cards
+    const grid = document.getElementById("dashboardGrid");
+    grid.innerHTML = `
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Products</div>
+        <h2 style="margin-top:.5rem;color:#4f46e5;">${products.length}</h2>
+        <small class="text-muted">Active items</small>
+      </div>
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Categories</div>
+        <h2 style="margin-top:.5rem;color:#16a34a;">${categories.length}</h2>
+        <small class="text-muted">Product groupings</small>
+      </div>
+      <div style="background:#fff;padding:1.5rem;border-radius:12px;border:1px solid #e9ecef;">
+        <div style="font-weight:700;font-size:1.1rem;color:#1d1d1f;">Total Invoices</div>
+        <h2 style="margin-top:.5rem;color:#0ea5e9;">${invoices.length}</h2>
+        <small class="text-muted">All purchases</small>
+      </div>
+    `;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ----------------------
+// Load main chart (all purchases last 7 days)
+// ----------------------
+function loadMainChart(filterUsername = "", filterInvoice = "") {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+
+  const filteredInvoices = allInvoices.filter(inv => {
+    const invDate = new Date(inv.created_at);
+    if (invDate < sevenDaysAgo || invDate > today) return false;
+    if (filterUsername && !inv.username.toLowerCase().includes(filterUsername.toLowerCase())) return false;
+    if (filterInvoice && !inv.invoice_number.toLowerCase().includes(filterInvoice.toLowerCase())) return false;
+    return true;
+  });
+
+  // Aggregate total per day
+  const dateMap = {};
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(sevenDaysAgo);
+    date.setDate(sevenDaysAgo.getDate() + d);
+    const key = date.toISOString().split("T")[0];
+    dateMap[key] = 0;
+  }
+
+  filteredInvoices.forEach(inv => {
+    const key = inv.created_at.split("T")[0];
+    if (key in dateMap) dateMap[key] += inv.total_amount;
+  });
+
+  const labels = Object.keys(dateMap);
+  const totals = Object.values(dateMap);
+
+  const ctx = document.getElementById("mainPurchaseChart").getContext("2d");
+  if (mainChart) mainChart.destroy();
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: "Total Purchases",
+      data: totals,
+      borderColor: '#4f46e5',
+      backgroundColor: 'rgba(79,70,229,0.2)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3
+    }]},
+    options: { responsive:true }
+  });
+
+  // Populate table
+  const tbody = document.getElementById("invoiceTableBody");
+  tbody.innerHTML = "";
+  filteredInvoices.sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+    .forEach(inv => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="padding:.5rem;border-bottom:1px solid #ccc;">${inv.invoice_number}</td>
+        <td style="padding:.5rem;border-bottom:1px solid #ccc;">${inv.username}</td>
+        <td style="padding:.5rem;border-bottom:1px solid #ccc;text-align:right;">${inv.total_amount}</td>
+        <td style="padding:.5rem;border-bottom:1px solid #ccc;">${inv.created_at.split("T")[0]}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+}
+
+// ----------------------
+// Load user chart
+// ----------------------
+function loadUserChart(username, type="daily") {
+  if (!username) {
+    const ctx = document.getElementById("userPurchaseChart").getContext("2d");
+    if (userChart) userChart.destroy();
+    return;
+  }
+
+  let userInvoices = allInvoices.filter(inv => inv.username === username);
+  if (type !== "alltime") {
+    const today = new Date();
+    if (type === "daily") {
+      userInvoices = userInvoices.filter(inv => new Date(inv.created_at).toDateString() === today.toDateString());
+    } else if (type === "weekly") {
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 6);
+      userInvoices = userInvoices.filter(inv => new Date(inv.created_at) >= weekAgo);
+    } else if (type === "monthly") {
+      const monthAgo = new Date(today);
+      monthAgo.setMonth(today.getMonth() - 1);
+      userInvoices = userInvoices.filter(inv => new Date(inv.created_at) >= monthAgo);
+    }
+  }
+
+  const labels = userInvoices.map(inv => inv.created_at.split("T")[0]);
+  const totals = userInvoices.map(inv => inv.total_amount);
+
+  const ctx = document.getElementById("userPurchaseChart").getContext("2d");
+  if (userChart) userChart.destroy();
+
+  userChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label:`Purchases of ${username}`,
+      data:totals,
+      borderColor:'#16a34a',
+      backgroundColor:'rgba(22,163,52,0.2)',
+      fill:true,
+      tension:0.3,
+      pointRadius:3
+    }]},
+    options:{ responsive:true }
+  });
+}
+
+// ----------------------
+// Event listeners
+// ----------------------
+document.getElementById("mainUserSearch").addEventListener("input", e => loadMainChart(e.target.value, document.getElementById("mainInvoiceSearch").value));
+document.getElementById("mainInvoiceSearch").addEventListener("input", e => loadMainChart(document.getElementById("mainUserSearch").value, e.target.value));
+
+document.getElementById("userSearch").addEventListener("input", e => loadUserChart(e.target.value, document.getElementById("userReportType").value));
+document.getElementById("userReportType").addEventListener("change", e => loadUserChart(document.getElementById("userSearch").value, e.target.value));
+
+// ----------------------
+// Initial load
+// ----------------------
+document.getElementById("adminUsername").textContent = "Admin";
+loadCounts().then(() => {
+  loadMainChart();
+  loadUserChart("");
+});
+</script>
+
+<style>
+#dashboardGrid > div:hover {
+  box-shadow:0 8px 20px rgba(0,0,0,.1);
+  transform: translateY(-4px);
+  transition:all .2s;
+}
+</style>
+{% endblock %}

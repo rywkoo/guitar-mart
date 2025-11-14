@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Home - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        /*
+            Using an image from picsum.photos for demonstration.
+            Replace with your own image.
+        */
+        --psh-bg-image: url('https://picsum.photos/id/1015/1600/1200');
+        --psh-min-height: 90vh;
+        --psh-padding: 0rem 0rem;
+        --psh-text-color: #ffffff;
+        --psh-overlay-color: rgba(17, 24, 39, 0.5);
+        --psh-cta-bg: #fff;
+        --psh-cta-text-color: #111827;
+        --psh-cta-hover-bg: #f3f4f6;
+    }
+    .parallax-hero {
+        box-sizing: border-box;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        min-height: var(--psh-min-height);
+        padding: var(--psh-padding);
+        width: 100%;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        background-image: var(--psh-bg-image);
+        background-position: center 0;
+        background-repeat: no-repeat;
+        background-size: cover;
+        margin-top: -100px;
+    }
+    .parallax-hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--psh-overlay-color);
+        z-index: 1;
+    }
+    .parallax-hero * {
+         box-sizing: border-box;
+    }
+    .psh-content {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+        color: var(--psh-text-color);
+    }
+    .psh-content .title {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin: 0 0 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .psh-content .subtitle {
+        font-size: clamp(1.1rem, 3vw, 1.25rem);
+        margin: 0 0 2rem;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .psh-content .cta {
+        display: inline-block;
+        background-color: var(--psh-cta-bg);
+        color: var(--psh-cta-text-color);
+        padding: 0.9rem 2.2rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 1.05rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    .psh-content .cta:hover {
+        background-color: var(--psh-cta-hover-bg);
+    }
+
+    /* Extra content section for demonstrating the scroll effect */
+    .scroll-demo-content {
+        height: 100vh; /* Ensures a lot of scroll space */
+        padding: 4rem 1.5rem;
+        background-color: #fff;
+        color: #111827;
+    }
+    .scroll-demo-content p {
+        max-width: 700px;
+        margin: 0 auto 1rem;
+        line-height: 1.6;
+    }
+
+    /* === Grid Container for the Cards === */
+    .cards-grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+
+    /* === Product Card Styles === */
+    .product-card {
+        --product-card-radius: 12px;
+        --product-card-shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.07);
+
+        background-color: #ffffff;
+        border-radius: var(--product-card-radius);
+        box-shadow: var(--product-card-shadow);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    }
+
+    .product-card a.product-card-link {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    /* Image container */
+    .product-card-image-container {
+        position: relative;
+        background-color: #f3f4f6; /* Fallback for transparent images */
+    }
+
+    .product-card-image {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* Product details */
+    .product-card-content {
+        padding: 1rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1; /* Pushes footer to the bottom */
+    }
+
+    .product-card-category {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .product-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 0;
+    }
+
+    /* Price and Action button footer */
+    .product-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.25rem;
+        border-top: 1px solid #f3f4f6;
+        margin-top: 1rem;
+    }
+
+    .product-card-price {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .product-card-cta {
+        background-color: #1f2937;
+        color: #ffffff;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .product-card-cta:hover {
+        background-color: #374151;
+    }
+
+</style>
+
+<!-- 
+======================================================================
+  HTML
+  - Place this in your <body> where you want the component to appear.
+======================================================================
+-->
+<section class="parallax-hero" id="parallax-hero-section">
+    <div class="psh-content">
+        <h1 class="title">A New Perspective</h1>
+        <p class="subtitle">Our innovative approach redefines industry standards, creating solutions that are both powerful and elegant.</p>
+        <a href="#" role="button" class="cta">Learn More About Us</a>
+    </div>
+</section>
+
+
+<h1 class="title" style="
+        position: relative;
+        z-index: 2;
+        color: black;
+        text-align: center;
+        ">
+        FEATURED ITEMS
+    
+    </h1>
+
+
+
+<div class="cards-grid-container" id="product-list"></div>
+
+<script>
+  async function loadProducts() {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/products");
+      const products = await response.json();
+
+      const container = document.getElementById("product-list");
+      container.innerHTML = "";
+
+      products.forEach(product => {
+        const card = `
+          <article class="product-card">
+              <a href="#" class="product-card-link">
+                  <div class="product-card-image-container">
+                      <img src="${product.image_url}" alt="${product.name}" class="product-card-image">
+                  </div>
+                  <div class="product-card-content">
+                      <span class="product-card-category">${product.category}</span>
+                      <h3 class="product-card-title">${product.name}</h3>
+                  </div>
+              </a>
+              <footer class="product-card-footer">
+                  <span class="product-card-price">$${product.price.toFixed(2)}</span>
+                  <button type="button" class="product-card-cta">Add to Cart</button>
+              </footer>
+          </article>
+        `;
+        container.insertAdjacentHTML("beforeend", card);
+      });
+    } catch (err) {
+      console.error("Error loading products:", err);
+    }
+  }
+
+  // Load products when the page opens
+  loadProducts();
+</script>
+
+
+
+<!-- 
+======================================================================
+  JavaScript
+  - Place this right before your closing </body> tag.
+======================================================================
+-->
+<script>
+(function() {
+    const parallaxSection = document.getElementById('parallax-hero-section');
+    if (!parallaxSection) return;
+
+    // --- Configuration ---
+    const parallaxSpeed = 0.5; // Set speed factor. 0.5 means it scrolls at half the speed.
+    // --- End Configuration ---
+
+    window.addEventListener('scroll', function() {
+        const offset = window.pageYOffset;
+        parallaxSection.style.backgroundPositionY = offset * parallaxSpeed + 'px';
+    });
+})();
+</script>
+{% endblock %}

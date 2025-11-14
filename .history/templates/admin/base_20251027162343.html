@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Admin - Mini Mart{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      background: #fdf6e3;
+      color: #4b3832;
+    }
+
+    .navbar {
+      background: #d2691e !important;
+      color: #fff;
+    }
+
+    .navbar-brand {
+      font-weight: bold;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .nav-link {
+      color: #4b3832;
+    }
+
+    .nav-link:hover {
+      background-color: #e4cda7;
+      border-radius: 5px;
+      color: #4b3832 !important;
+    }
+
+    .sidebar {
+      background: #f5deb3;
+      min-height: 100vh;
+      width: 220px;
+      padding: 20px;
+      border-right: 1px solid #d2b48c;
+    }
+
+    .sidebar .nav-item {
+      margin-bottom: 10px;
+    }
+
+    .flex-fill {
+      padding: 30px;
+    }
+
+    button#logoutBtn {
+      background-color: #c04000;
+      color: #fff;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+    }
+
+    button#logoutBtn:hover {
+      background-color: #a03000;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <span class="navbar-brand">Mini Mart Admin</span>
+    <div class="ml-auto d-flex align-items-center">
+      <span id="username" class="mr-3"></span>
+      <button id="logoutBtn">Logout</button>
+    </div>
+  </nav>
+
+  <div class="d-flex">
+    <div class="sidebar">
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/admin/dashboard">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/products">Products</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/categories">Categories</a></li>
+      </ul>
+    </div>
+
+    <div class="flex-fill">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+  // Get username and role from admin check API
+  try {
+    const res = await fetch("/api/admin/check", { method: "GET", credentials: "include" });
+    if (!res.ok) {
+      alert("Unauthorized: Admins only");
+      window.location.href = "/";
+    } else {
+      const data = await res.json();
+      if(data.username) document.getElementById("username").innerText = data.username;
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error verifying admin access");
+    window.location.href = "/";
+  }
+
+  // Logout button
+  const logoutBtn = document.getElementById("logoutBtn");
+  if(logoutBtn){
+    logoutBtn.addEventListener("click", () => {
+      // Delete JWT cookie
+      document.cookie = "access_token_cookie=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      // Redirect to home page
+      window.location.href = "/";
+    });
+  }
+});
+</script>
+{% endblock %}
+</body>
+</html>

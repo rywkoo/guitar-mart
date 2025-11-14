@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - Mini Mart{% endblock %}
+
+{% block content %}
+<div class="shop-container" style="max-width:900px; margin:2rem auto; flex-direction:column; gap:2rem;">
+
+  <h1 style="text-align:center; font-size:2rem; font-weight:700;">Checkout</h1>
+
+  <div id="cartSummaryBox" style="background:#fff; padding:2rem; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,0.08);">
+    <h2 style="font-size:1.25rem; font-weight:700; margin-bottom:1rem;">Order Summary</h2>
+    <div id="summaryLines"></div>
+    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1.1rem; margin:1rem 0 2rem;">
+      <span>Total</span>
+      <span id="totalPrice">$0.00</span>
+    </div>
+    <button id="checkoutBtn" class="add-btn" style="font-size:1rem;">Place Order</button>
+  </div>
+
+</div>
+
+<!-- Success Modal -->
+<div id="checkoutModal" style="position:fixed; top:0; left:0; width:100%; height:100%; display:none; justify-content:center; align-items:center; background: rgba(0,0,0,0.6); z-index:3000; transition: all 0.3s ease;">
+  <div style="background:white; padding:2rem; border-radius:12px; max-width:350px; text-align:center; animation: pop 0.25s ease-out;">
+    <div class="big-check">✔</div>
+    <h3>Order Placed!</h3>
+    <p>Your invoice has been sent to your email.</p>
+    <button class="continue-btn" onclick="closeCheckoutModal()">Continue Shopping</button>
+  </div>
+</div>
+
+<style>
+  @keyframes pop {
+    from { transform: scale(.85); opacity:0; }
+    to { transform: scale(1); opacity:1; }
+  }
+  .big-check {
+    font-size: 3.5rem;
+    color: var(--color-primary);
+    margin-bottom:10px;
+    font-weight:900;
+  }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function getCart() {
+  return JSON.parse(localStorage.getItem('cart') || '[]');
+}
+
+function renderCheckoutSummary() {
+  const cart = getCart();
+  const summaryDiv = document.getElementById('summaryLines');
+  const totalSpan = document.getElementById('totalPrice');
+  if (!cart.length) {
+    summaryDiv.innerHTML = '<p>Your cart is empty.</p>';
+    totalSpan.textContent = '$0.00';
+    document.getElementById('checkoutBtn').disabled = true;
+    return;
+  }
+
+  let subtotal = 0;
+  summaryDiv.innerHTML = '';
+  cart.forEach(item => {
+    const lineTotal = item.price * item.quantity;
+    subtotal += lineTotal;
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.justifyContent = 'space-between';
+    row.style.marginBottom = '.5rem';
+    row.innerHTML = `<span>${item.name} x${item.quantity}</span><span>$${lineTotal.toFixed(2)}</span>`;
+    summaryDiv.appendChild(row);
+  });
+
+  const tax = subtotal * 0.05;
+  const total = subtotal + tax;
+
+  const taxRow = document.createElement('div');
+  taxRow.style.display = 'flex';
+  taxRow.style.justifyContent = 'space-between';
+  taxRow.style.marginBottom = '.5rem';
+  taxRow.innerHTML = `<span>Tax (5%)</span><span>$${tax.toFixed(2)}</span>`;
+  summaryDiv.appendChild(taxRow);
+
+  totalSpan.textContent = `$${total.toFixed(2)}`;
+}
+
+function closeCheckoutModal() {
+  document.getElementById('checkoutModal').style.display = 'none';
+  localStorage.removeItem('cart'); // clear cart after checkout
+  updateCartCount(); // update navbar badge
+  window.location.href = '/shop';
+}
+
+document.getElementById('checkoutBtn').addEventListener('click', async () => {
+  const cart = getCart();
+  if (!cart.length) return alert("Cart is empty");
+
+  try {
+    const res = await fetch("/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cart })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('checkoutModal').style.display = 'flex';
+    } else {
+      alert(data.msg || "Checkout failed");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Error during checkout");
+  }
+});
+
+// Initial render
+document.addEventListener('DOMContentLoaded', renderCheckoutSummary);
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+
+{% block content %}
+<div style="display:flex; gap:2rem;">
+
+  <!-- ---------- SIDEBAR ---------- -->
+  <aside style="flex:0 0 250px;position:sticky;top:20px;height:fit-content;padding:1rem;background:#f9f9f9;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.05);">
+    <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;color:#1d1d1f;">Filter Products</h2>
+    
+    <!-- Ad / Banner -->
+    <div style="margin-bottom:1rem;">
+      <img src="{{ url_for('static', filename='images/shop_ad.jpg') }}" alt="Shop Ad" style="width:100%;border-radius:8px;">
+    </div>
+
+    <!-- Search -->
+    <div style="margin-bottom:1rem;">
+      <input type="text" id="sidebarSearch" placeholder="Search by name or category..." 
+             style="width:100%;padding:.5rem;border:1px solid #ced4da;border-radius:6px;">
+    </div>
+
+    <!-- Price Filter -->
+    <div style="margin-bottom:1rem;">
+      <label for="priceRange" style="display:block;font-weight:600;margin-bottom:.5rem;">Price: <span id="priceValue"></span></label>
+      <input type="range" id="priceRange" min="0" max="{{ max_price }}" step="1" value="{{ max_price }}" style="width:100%;">
+    </div>
+
+    <!-- Categories -->
+    <div>
+      <h3 style="font-weight:700;margin-bottom:.5rem;">Categories</h3>
+      {% for cat in categories %}
+      <label style="display:block;margin-bottom:.25rem;">
+        <input type="checkbox" class="categoryFilter" value="{{ cat.id }}"> {{ cat.name }}
+      </label>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <!-- ---------- PRODUCTS GRID ---------- -->
+  <div style="flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1.5rem;">
+    {% for product in products %}
+    <div class="product-card" data-name="{{ product.name|lower }}" data-category="{{ product.category.name|lower if product.category else '' }}" data-price="{{ product.price }}" 
+         style="border:1px solid #e9ecef;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,.05);">
+      <img src="{{ url_for('static', filename='images/' ~ product.image) if product.image else url_for('static', filename='images/no-image.png') }}"
+           alt="{{ product.name }}" style="width:100%;height:150px;object-fit:cover;">
+      <div style="padding:1rem;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:.5rem;">{{ product.name }}</h3>
+        <p style="margin:0 0 .5rem;color:#555;font-size:0.9rem;">{{ product.category.name if product.category else 'Uncategorized' }}</p>
+        <p style="margin:0;font-weight:600;">${{ "%.2f"|format(product.price) }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ---------- PRICE DISPLAY ----------
+const priceRange = document.getElementById('priceRange');
+const priceValue = document.getElementById('priceValue');
+priceValue.textContent = priceRange.value;
+
+priceRange.addEventListener('input', () => {
+  priceValue.textContent = priceRange.value;
+  filterProducts();
+});
+
+// ---------- SEARCH & FILTER ----------
+const sidebarSearch = document.getElementById('sidebarSearch');
+const categoryCheckboxes = document.querySelectorAll('.categoryFilter');
+const productCards = document.querySelectorAll('.product-card');
+
+sidebarSearch.addEventListener('input', filterProducts);
+categoryCheckboxes.forEach(cb => cb.addEventListener('change', filterProducts));
+
+function filterProducts() {
+  const query = sidebarSearch.value.toLowerCase();
+  const selectedCategories = Array.from(categoryCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+  const maxPrice = Number(priceRange.value);
+
+  productCards.forEach(card => {
+    const name = card.dataset.name;
+    const category = card.dataset.category;
+    const price = Number(card.dataset.price);
+
+    let matchesSearch = name.includes(query) || category.includes(query);
+    let matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(card.dataset.category_id);
+    let matchesPrice = price <= maxPrice;
+
+    card.style.display = (matchesSearch && matchesCategory && matchesPrice) ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Menu Navbar (Definitive Final Version)</title>
+    <style>
+        /*
+        ========================================
+        CSS Custom Properties (Base Theme)
+        ========================================
+        */
+        :root {
+            --color-background: #ffffff;
+            --color-surface: #f8f9fa; /* For menu background */
+            --color-text-primary: #212529;
+            --color-text-secondary: #495057;
+            --color-primary: #0056b3;
+            --color-border: #e9ecef;
+            --font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-weight-bold: 600;
+            --navbar-height: 80px;
+            --navbar-padding: 1.5rem;
+            --container-width: 100%;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; font-family: var(--font-family-sans-serif); line-height: 1.6; }
+        .content { height: 200vh; max-width: var(--container-width); margin: 0 auto; padding: 30px var(--navbar-padding); }
+        ul { list-style: none; margin: 0; padding: 0; }
+        a { text-decoration: none; color: var(--color-text-secondary); transition: color var(--transition-speed) ease; }
+        a:hover, a:focus { color: var(--color-primary); }
+
+        .navbar { position: sticky; top: 0; z-index: 1000; height: var(--navbar-height); display: flex; align-items: center; background-color: var(--color-background); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .navbar__container { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: var(--container-width); margin: 0 auto; padding: 0 var(--navbar-padding); }
+        .navbar__brand { font-size: 1.75rem; font-weight: var(--font-weight-bold); color: var(--color-text-primary); }
+        .navbar__toggle { display: block; border: 1px solid var(--color-border); border-radius: 4px; padding: 0.25rem 0.75rem; background: transparent; cursor: pointer; }
+        .navbar__toggle .bar { display: block; width: 22px; height: 2px; margin: 6px 0; background-color: var(--color-text-primary); transition: transform var(--transition-speed) ease; }
+        .navbar__toggle.is-active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        .navbar__toggle.is-active .bar:nth-child(2) { opacity: 0; }
+        .navbar__toggle.is-active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+        
+        .navbar__menu { display: none; }
+        .navbar__menu.is-active { display: block; position: absolute; top: var(--navbar-height); left: 0; width: 100%; background-color: var(--color-background); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        
+        .navbar__item > .navbar__link { display: flex; align-items: center; padding: 1.25rem var(--navbar-padding); font-weight: var(--font-weight-bold); }
+        .navbar__item:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+        
+        :is(.navbar__toggle, .navbar__link):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        
+        /* Mobile Accordion Styles */
+        .mega-menu-toggle { justify-content: space-between; width: 100%; }
+        .mega-menu-toggle::after { content: 'â€º'; font-size: 1.5em; transform: rotate(90deg); transition: transform var(--transition-speed) ease; }
+        .mega-menu-item.is-active > .mega-menu-toggle::after { transform: rotate(-90deg); }
+        .mega-menu { max-height: 0; overflow: hidden; background-color: var(--color-surface); transition: max-height var(--transition-speed) ease-in-out; }
+        .mega-menu-item.is-active > .mega-menu { max-height: 1000px; }
+        .mega-menu__list { padding: 0.5rem var(--navbar-padding); }
+        .mega-menu__list li a { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border-radius: var(--border-radius); }
+        .mega-menu__list li a:hover { background-color: #e9ecef; }
+        .mega-menu__list .icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-primary); }
+        .mega-menu__heading { display: none; }
+        .mega-menu__feature { display: none; }
+        
+        @media (min-width: 992px) {
+            .navbar__toggle { display: none; }
+            .navbar__menu { display: flex; align-items: center; position: static; width: auto; background: none; box-shadow: none; }
+            .navbar__list { display: flex; align-items: center; gap: 0.5rem; }
+            .navbar__item, .navbar__item:not(:last-child) { border: none; }
+            .navbar__item > .navbar__link { padding: 0.5rem 1rem; }
+            .mega-menu-toggle::after { content: '\25BE'; margin-left: 0.5em; transform: rotate(0); }
+            
+            /* --- The Definitive Positioning Fix --- */
+            .mega-menu-item {
+                /* FIX #1: Make the parent LI static on desktop. */
+                /* This forces the child .mega-menu to anchor to the full-width .navbar. */
+                position: static;
+            }
+            .mega-menu {
+                /* FIX #2: Position the menu relative to the full viewport/navbar. */
+                display: block; position: absolute;
+                top: calc(var(--navbar-height) - 5px); /* Appears just below the navbar */
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90vw; max-width: 900px;
+                background-color: var(--color-background); border: 1px solid var(--color-border);
+                border-radius: var(--border-radius); box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                opacity: 0; visibility: hidden;
+                transition: opacity var(--transition-speed) ease, visibility var(--transition-speed) ease;
+                max-height: none;
+            }
+            .mega-menu-item:hover > .mega-menu, .mega-menu-item:focus-within > .mega-menu { opacity: 1; visibility: visible; }
+            /* --- End of Fix --- */
+            
+            .mega-menu__content { padding: 1.5rem; }
+            .mega-menu__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+            .mega-menu__list { padding: 0; }
+            .mega-menu__heading { display: block; font-size: 0.9rem; font-weight: var(--font-weight-bold); text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 1rem; padding: 0 0.75rem; }
+            .mega-menu__feature { display: block; border-radius: var(--border-radius); overflow: hidden; }
+            .mega-menu__feature img { display: block; width: 100%; height: auto; }
+            .mega-menu__feature-content { padding: 1rem; background-color: var(--color-surface); }
+            .mega-menu__feature-content h4 { margin: 0 0 0.5rem; }
+            .mega-menu__feature-content p { font-size: 0.9rem; margin: 0 0 1rem; }
+            .mega-menu__cta { display: inline-block; padding: 0.5rem 1rem; background-color: var(--color-primary); color: #fff; font-weight: var(--font-weight-bold); border-radius: var(--border-radius); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="navbar__container">
+            <a href="#" class="navbar__brand">MegaCorp</a>
+            <button class="navbar__toggle" id="navbarToggle" aria-label="Toggle navigation" aria-expanded="false">
+                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            </button>
+            <nav id="navbarMenu" class="navbar__menu" role="navigation">
+                <ul class="navbar__list">
+                    <li class="navbar__item"><a href="#" class="navbar__link">Home</a></li>
+                    
+                    <!-- Mega Menu Item Start -->
+                    <li class="navbar__item mega-menu-item">
+                        <a href="#" class="navbar__link mega-menu-toggle" role="button" aria-haspopup="true" aria-expanded="false">Products</a>
+                        <div class="mega-menu">
+                            <div class="mega-menu__content">
+                                <div class="mega-menu__grid">
+                                    <div class="mega-menu__column">
+                                        <h3 class="mega-menu__heading">Software Solutions</h3>
+                                        <ul class="mega-menu__list">
+                                            <li><a href="#"><svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M14,6H10V4H14M10,12H14V14H10M20,2H4C2.9,2 2,2.9 2,4V20C2,21.1 2.9,22 4,22H20C21.1,22 22,21.1 22,20V4C22,2.9 21.1,2 20,2Z"></path></svg> <span>Enterprise CRM</span></a></li>
+                                            <li><a href="#"><svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M3,3H9V7H3V3M15,10H21V14H15V10M15,17H21V21H15V17M13,3H21V7H13V3M3,10H11V21H3V10M15,3H13V7H15V3Z"></path></svg> <span>Analytics Suite</span></a></li>
+                                            <li><a href="#"><svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19,20C19,21.1 18.1,22 17,22H7C5.9,22 5,21.1 5,20V4C5,2.9 5.9,2 7,2H17C18.1,2 19,2.9 19,4V20M17,18H7V6H17V18M12,10.5C11.3,10.5 10.6,10.6 10,10.8V12.1C10.5,12 11,12 11.5,12C12.4,12 12.9,12.5 12.9,13.2C12.9,13.8 12.5,14.3 11.5,14.3H11.2V15.5H11.5C13.2,15.5 14.1,14.7 14.1,13.2C14.1,11.8 13.1,10.5 11.5,10.5H12Z"></path></svg> <span>Mobile Apps</span></a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="mega-menu__column">
+                                        <h3 class="mega-menu__heading">Cloud Services</h3>
+                                        <ul class="mega-menu__list">
+                                            <li><a href="#"><svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M6.5,20Q4.22,20 2.61,18.39Q1,16.78 1,14.5Q1,12.55 2.13,11.09Q3.25,9.63 5.08,9.22Q5.5,7.05 7.15,5.72Q8.8,4.4 11,4.4Q13.3,4.4 15.1,6.15Q16.9,7.9 16.9,10.2Q16.9,10.55 16.87,10.9Q18.3,10.97 19.4,11.95Q20.5,12.93 20.5,14.4Q20.5,15.82 19.5,16.86Q18.5,17.9 17,17.9H13.2Q13.05,19.1 12.13,20.05Q11.2,21 10,21Q8.65,21 7.58,19.93Q6.5,18.85 6.5,17.5V17.45Q6.5,17.85 6.38,18.23Q6.25,18.6 6.5,20M6.5,15.6V17.5Q6.5,18.05 6.85,18.4Q7.2,18.75 7.75,18.75Q8.25,18.75 8.6,18.4Q8.95,18.05 8.95,17.5V15.5H17Q17.75,15.5 18.25,15Q18.75,14.5 18.75,14.4Q18.75,13.6 18.25,13.1Q17.75,12.6 17,12.6Q16.7,12.6 16.35,12.75V10.2Q16.35,8.25 14.85,6.75Q13.35,5.25 11.35,5.25Q9.35,5.25 7.9,6.75Q6.45,8.25 6.45,10.2V11.2L5.4,11.35Q4,11.65 3.25,12.6Q2.5,13.55 2.5,14.5Q2.5,16.05 3.5,17.05Q4.5,18.05 6.05,18.05H6.5V15.6Z"></path></svg> <span>Managed Hosting</span></a></li>
+                                            <li><a href="#"><svg class="icon" viewBox="0 0 24 24"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"></path></svg> <span>API Management</span></a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="mega-menu__column mega-menu__column--feature">
+                                        <div class="mega-menu__feature">
+                                            <img src="https://placehold.co/600x400/0056b3/ffffff?text=New+Feature" alt="Promotional image for a new feature.">
+                                            <div class="mega-menu__feature-content">
+                                                <h4>Analytics Suite 2.0</h4>
+                                                <p>Unlock powerful new insights with our latest update.</p>
+                                                <span class="mega-menu__cta">Learn More</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <!-- Mega Menu Item End -->
+                    
+                    <li class="navbar__item"><a href="#" class="navbar__link">Pricing</a></li>
+                    <li class="navbar__item"><a href="#" class="navbar__link">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main class="content">
+        {% block content %}
+        {% endblock %}
+    </main>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const navbarToggle = document.getElementById('navbarToggle');
+        const navbarMenu = document.getElementById('navbarMenu');
+        if (navbarToggle) {
+            navbarToggle.addEventListener('click', function() {
+                navbarToggle.classList.toggle('is-active');
+                navbarMenu.classList.toggle('is-active');
+            });
+        }
+        const megaMenuToggles = document.querySelectorAll('.mega-menu-toggle');
+        megaMenuToggles.forEach(toggle => {
+            toggle.addEventListener('click', function(event) {
+                const isMobileView = getComputedStyle(navbarToggle).display !== 'none';
+                if (isMobileView) {
+                    event.preventDefault();
+                    const parentItem = this.closest('.mega-menu-item');
+                    parentItem.classList.toggle('is-active');
+                }
+            });
+        });
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,396 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1rem;">Dashboard</h1>
+<p class="text-muted">Welcome, <span id="adminUsername">Admin</span>. Manage your store and view analytics here.</p>
+
+<!-- Stats Cards -->
+<div id="dashboardGrid" style="
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:1.5rem;
+    margin-top:1rem;
+">
+  <!-- Loaded via JS -->
+</div>
+
+<!-- MAIN CHART: All Purchases -->
+<div style="margin-top:2rem; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,.05);">
+  <h2 style="font-weight:700;color:#1d1d1f;margin-bottom:1rem;">All Purchases</h2>
+  <div style="margin-bottom:1rem; display: flex; align-items: center; gap: 0.5rem;">
+    <select id="mainReportType" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;">
+      <option value="alltime">All Time</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="custom">Custom</option>
+    </select>
+    <input type="date" id="mainStartDate" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;display:none;">
+    <input type="date" id="mainEndDate" style="padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;display:none;">
+  </div>
+  <canvas id="mainPurchaseChart" style="width:100%;max-height:400px;"></canvas>
+</div>
+
+<!-- INVOICE LIST + USER CHART -->
+<div style="display:flex; gap:2rem; margin-top:2rem; flex-wrap:wrap;">
+
+  <!-- LEFT: Search + Invoices -->
+  <div style="flex:1; min-width:300px; background:#fff; padding:1.5rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,.05); max-height:520px; overflow-y:auto;">
+    <h3 style="font-weight:700;color:#1d1d1f;margin-bottom:1rem; display:flex; align-items:center; gap:.5rem;">
+      Invoices
+    </h3>
+
+    <!-- SEARCH BAR -->
+    <div style="margin-bottom:1rem;">
+      <input type="text" id="invoiceSearch" placeholder="Search by username or invoice number..." 
+             style="width:100%; padding:.5rem 1rem; border:1px solid #ced4da; border-radius:8px; font-size:0.9rem;">
+    </div>
+
+    <div id="invoiceList"></div>
+  </div>
+
+  <!-- RIGHT: User Chart with CENTERED GREEN DOT -->
+  <div style="flex:2; min-width:350px; background:#fff; padding:2rem; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,.05); overflow-x:auto;">
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:center;">
+      <h3 id="userChartTitle" style="font-weight:700;color:#1d1d1f;margin:0;">Select an invoice</h3>
+      <div style="margin-left:auto; display:flex; gap:.5rem;">
+        <select id="userReportType" style="padding:.4rem .8rem;border:1px solid #ced4da;border-radius:6px;">
+          <option value="alltime">All Time</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="date" id="userStartDate" style="padding:.4rem .8rem;border:1px solid #ced4da;border-radius:6px;display:none;">
+        <input type="date" id="userEndDate" style="padding:.4rem .8rem;border:1px solid #ced4da;border-radius:6px;display:none;">
+      </div>
+    </div>
+    <canvas id="userPurchaseChart" style="width:100%;max-height:400px;min-width:600px;"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+
+<script>
+/* ------------------------------------------------------------------ */
+/* Global State                                                       */
+/* ------------------------------------------------------------------ */
+let mainChart = null;
+let userChart = null;
+let allInvoices = [];
+let filteredInvoices = [];
+let selectedInvoice = null;
+
+/* ------------------------------------------------------------------ */
+/* Load Stats                                                         */
+/* ------------------------------------------------------------------ */
+async function loadCounts() {
+  try {
+    const opts = { credentials: 'include', headers: { Accept: 'application/json' } };
+    const [prodRes, catRes] = await Promise.all([
+      fetch('/admin/api/products', opts),
+      fetch('/admin/api/categories', opts)
+    ]);
+    if (!prodRes.ok || !catRes.ok) throw new Error('API error');
+    const products = await prodRes.json();
+    const categories = await catRes.json();
+
+    const grid = document.getElementById('dashboardGrid');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-title">Total Products</div>
+        <h2 class="stat-value" style="color:#4f46e5;">${products.length}</h2>
+        <small class="text-muted">Active items</small>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Total Categories</div>
+        <h2 class="stat-value" style="color:#16a34a;">${categories.length}</h2>
+        <small class="text-muted">Product groupings</small>
+      </div>
+    `;
+    grid.querySelectorAll('.stat-card').forEach(c => {
+      c.addEventListener('mouseenter', () => c.style.transform = 'translateY(-4px)');
+      c.addEventListener('mouseleave', () => c.style.transform = '');
+    });
+  } catch (e) { console.error('loadCounts →', e); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Load All Invoices                                                  */
+/* ------------------------------------------------------------------ */
+async function loadAllInvoices() {
+  try {
+    const res = await fetch('/admin/api/invoices', { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to load invoices');
+    allInvoices = await res.json();
+    filteredInvoices = [...allInvoices];
+    loadMainChart();
+    renderInvoiceList();
+    setupSearch();
+  } catch (e) {
+    console.error('loadAllInvoices →', e);
+    document.getElementById('invoiceList').innerHTML = '<p style="color:#dc3545; text-align:center;">Failed to load invoices.</p>';
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* MAIN CHART                                                         */
+/* ------------------------------------------------------------------ */
+function loadMainChart() {
+  const type = document.getElementById('mainReportType').value;
+  const start = document.getElementById('mainStartDate').value;
+  const end = document.getElementById('mainEndDate').value;
+
+  const filtered = filterByTime(allInvoices, type, start, end);
+  const map = {};
+  filtered.forEach(inv => {
+    const date = inv.created_at.split('T')[0];
+    map[date] = (map[date] || 0) + inv.total_amount;
+  });
+
+  const labels = Object.keys(map).sort();
+  const data = labels.map(d => map[d]);
+
+  const ctx = document.getElementById('mainPurchaseChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Total Purchases ($)', data, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.2)', fill: true, tension: 0.3, pointRadius: 4 }] },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 45 } } } }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* SEARCH + INVOICE LIST                                              */
+/* ------------------------------------------------------------------ */
+function setupSearch() {
+  const searchInput = document.getElementById('invoiceSearch');
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    if (!query) {
+      filteredInvoices = [...allInvoices];
+    } else {
+      filteredInvoices = allInvoices.filter(inv =>
+        inv.username.toLowerCase().includes(query) ||
+        inv.invoice_number.toLowerCase().includes(query)
+      );
+    }
+    renderInvoiceList();
+  });
+}
+
+function renderInvoiceList() {
+  const container = document.getElementById('invoiceList');
+  container.innerHTML = '';
+
+  const display = filteredInvoices
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 50); // limit for performance
+
+  if (display.length === 0) {
+    container.innerHTML = '<p style="color:#6c757d; text-align:center; padding:1rem;">No invoices found.</p>';
+    return;
+  }
+
+  display.forEach((inv, idx) => {
+    const card = document.createElement('div');
+    card.className = 'invoice-card';
+    card.innerHTML = `
+      <div class="invoice-header">
+        <span class="invoice-number">${inv.invoice_number}</span>
+      </div>
+      <div class="invoice-body">
+        <div><strong>User:</strong> ${inv.username}</div>
+        <div><strong>Amount:</strong> <span class="amount">$${Number(inv.total_amount).toFixed(2)}</span></div>
+        <div><strong>Date:</strong> ${new Date(inv.created_at).toLocaleDateString()}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => selectInvoice(inv));
+    container.appendChild(card);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* SELECT INVOICE → CENTER GREEN DOT                                  */
+/* ------------------------------------------------------------------ */
+function selectInvoice(invoice) {
+  selectedInvoice = invoice;
+  document.getElementById('userChartTitle').textContent = `Invoice: ${invoice.invoice_number} – ${invoice.username}`;
+  loadUserChart();
+}
+
+function loadUserChart() {
+  if (!selectedInvoice) return;
+
+  const type = document.getElementById('userReportType').value;
+  const start = document.getElementById('userStartDate').value;
+  const end = document.getElementById('userEndDate').value;
+
+  // Filter user's invoices based on time
+  const userInvoices = allInvoices
+    .filter(i => i.username === selectedInvoice.username)
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+  const filtered = filterByTime(userInvoices, type, start, end);
+
+  // ----------------------------------------------------------------
+  // Create spike with left/right padding
+  // ----------------------------------------------------------------
+  const leftPadding = 5;
+  const rightPadding = 5;
+
+  const labels = [];
+  const data = [];
+
+  // Left padding with zero values
+  for (let i = leftPadding; i > 0; i--) {
+    const d = new Date(selectedInvoice.created_at);
+    d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString());
+    data.push(0); // zero to connect line
+  }
+
+  // Selected invoice in the center
+  labels.push(new Date(selectedInvoice.created_at).toLocaleDateString());
+  data.push(selectedInvoice.total_amount);
+
+  // Right padding with zero values
+  for (let i = 1; i <= rightPadding; i++) {
+    const d = new Date(selectedInvoice.created_at);
+    d.setDate(d.getDate() + i);
+    labels.push(d.toLocaleDateString());
+    data.push(0); // zero to connect line
+  }
+
+  const ctx = document.getElementById('userPurchaseChart').getContext('2d');
+  if (userChart) userChart.destroy();
+
+  userChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `${selectedInvoice.username}'s Purchase`,
+          data,
+          borderColor: '#16a34a',
+          backgroundColor: 'rgba(22,163,74,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: data.map(v => (v !== selectedInvoice.total_amount ? 0 : 6)),
+          pointBackgroundColor: data.map(v => (v === selectedInvoice.total_amount ? '#16a34a' : 'transparent')),
+          pointBorderColor: data.map(v => (v === selectedInvoice.total_amount ? '#fff' : 'transparent')),
+          pointBorderWidth: 2
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.parsed.y !== 0 ? `$${ctx.parsed.y.toFixed(2)}` : ''
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true },
+        x: { ticks: { maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Time Filter Helper                                                 */
+/* ------------------------------------------------------------------ */
+function filterByTime(invoices, type, start = null, end = null) {
+  if (type === 'custom') {
+    if (!start || !end) return invoices;
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T23:59:59');
+    return invoices.filter(i => {
+      const d = new Date(i.created_at);
+      return d >= s && d <= e;
+    });
+  }
+  const now = new Date();
+  return invoices.filter(i => {
+    const d = new Date(i.created_at);
+    if (type === 'daily')   return d.toDateString() === now.toDateString();
+    if (type === 'weekly')  { const w = new Date(now); w.setDate(now.getDate() - 6); return d >= w; }
+    if (type === 'monthly') { const m = new Date(now); m.setMonth(now.getMonth() - 1); return d >= m; }
+    return true;
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Setup Date Inputs                                                  */
+/* ------------------------------------------------------------------ */
+function setupDateInputs(prefix, isUser = false) {
+  const typeEl = document.getElementById(`${prefix}ReportType`);
+  const startEl = document.getElementById(`${prefix}StartDate`);
+  const endEl = document.getElementById(`${prefix}EndDate`);
+  const reloadFn = isUser ? loadUserChart : loadMainChart;
+
+  typeEl.addEventListener('change', () => {
+    const show = typeEl.value === 'custom';
+    startEl.style.display = show ? 'inline-block' : 'none';
+    endEl.style.display = show ? 'inline-block' : 'none';
+    reloadFn();
+  });
+
+  startEl.addEventListener('change', () => { if (typeEl.value === 'custom') reloadFn(); });
+  endEl.addEventListener('change', () => { if (typeEl.value === 'custom') reloadFn(); });
+}
+
+setupDateInputs('main', false);
+setupDateInputs('user', true);
+
+/* ------------------------------------------------------------------ */
+/* Init                                                               */
+/* ------------------------------------------------------------------ */
+document.getElementById('adminUsername').textContent = 'Admin';
+loadCounts();
+loadAllInvoices();
+</script>
+
+<style>
+.stat-card {
+  background:#fff; padding:1.5rem; border-radius:12px; border:1px solid #e9ecef;
+  cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.05);
+  transition:transform .2s, box-shadow .2s;
+}
+.stat-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,.1); }
+.stat-title { font-weight:700; font-size:1.1rem; color:#1d1d1f; }
+.stat-value { margin-top:.5rem; }
+
+.invoice-card {
+  background:#fff;
+  border:1px solid #e9ecef;
+  border-radius:10px;
+  padding:1rem;
+  margin-bottom:.75rem;
+  cursor:pointer;
+  transition:all .2s ease;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+.invoice-card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(0,0,0,.1);
+  border-color:#16a34a;
+}
+.invoice-header { font-size:.9rem; margin-bottom:.5rem; }
+.invoice-number { color:#16a34a; font-weight:600; }
+.invoice-body { font-size:.9rem; color:#555; }
+.invoice-body div { margin-bottom:.25rem; }
+.amount { color:#16a34a; font-weight:600; }
+</style>
+{% endblock %}

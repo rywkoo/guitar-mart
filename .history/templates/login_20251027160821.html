@@ -1,0 +1,47 @@
+<script>
+const form = document.getElementById('loginForm');
+const messageDiv = document.getElementById('message');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  messageDiv.textContent = '';
+  messageDiv.style.color = 'red';
+
+  const formData = new FormData(form);
+  const data = {
+    username: formData.get('username'),
+    password: formData.get('password')
+  };
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Save JWT token and role
+      localStorage.setItem("jwtToken", result.access_token);
+      localStorage.setItem("username", result.username);
+      localStorage.setItem("role", result.role);
+
+      messageDiv.style.color = 'green';
+      messageDiv.textContent = 'Login successful! Redirecting...';
+      setTimeout(() => {
+        if(result.role === "admin"){
+          window.location.href = "/admin"; // redirect admin to admin page
+        } else {
+          window.location.href = "/"; // normal user to home
+        }
+      }, 1500);
+    } else {
+      messageDiv.textContent = result.error || JSON.stringify(result);
+    }
+  } catch (err) {
+    messageDiv.textContent = 'Error: ' + err.message;
+  }
+});
+</script>

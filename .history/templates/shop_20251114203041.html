@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Shop - Mini Mart{% endblock %}
+
+{% block content %}
+<style>
+  .shop-container {
+    display: flex;
+    gap: 2rem;
+    padding: 1rem;
+    max-width: 1400px;
+    margin: auto;
+  }
+
+  /* Sidebar */
+  .filter-sidebar {
+    width: 260px;
+    background: white;
+    padding: 1rem 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+  }
+
+  .filter-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .filter-box {
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-box label {
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 600;
+  }
+
+  .filter-box input[type="range"] {
+    width: 100%;
+  }
+
+  .category-list label {
+    display:block;
+    margin: 5px 0;
+    cursor:pointer;
+  }
+
+  /* Product Grid */
+  .product-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .product-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+    transition: .2s;
+  }
+
+  .product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 18px rgba(0,0,0,0.12);
+  }
+
+  .product-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .price {
+    color: var(--color-primary);
+    font-weight: 700;
+  }
+
+  .add-btn {
+    width: 100%;
+    background: var(--color-primary);
+    padding: 0.6rem;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: .2s;
+  }
+
+  .add-btn:hover {
+    background: var(--color-primary-light);
+  }
+
+  /* Modal */
+  #addedModal {
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.6);
+    display:none;
+    justify-content:center;
+    align-items:center;
+    z-index:3000;
+  }
+
+  .added-box {
+    background:white;
+    padding:2rem;
+    text-align:center;
+    border-radius:12px;
+    width:90%;
+    max-width:330px;
+    animation: pop .25s ease-out;
+  }
+
+  @keyframes pop {
+    from { transform: scale(.85); opacity:0; }
+    to { transform: scale(1); opacity:1; }
+  }
+
+  .big-check {
+    font-size:3.5rem;
+    color: var(--color-primary);
+    margin-bottom:10px;
+  }
+
+  .added-box button {
+    width:100%;
+    padding:.7rem;
+    margin-top:10px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    font-weight:700;
+  }
+
+  .continue-btn {
+    background:#eee;
+  }
+
+  .cart-btn-go {
+    background: var(--color-primary);
+    color:white;
+  }
+</style>
+
+<div class="shop-container">
+
+  <!-- SIDEBAR FILTER -->
+  <aside class="filter-sidebar">
+    <div class="filter-title">Filters</div>
+
+    <div class="filter-box">
+      <label>Search</label>
+      <input type="text" id="searchInput" placeholder="Search name/category..." style="width:100%; padding:7px; border-radius:8px; border:1px solid #ddd;">
+    </div>
+
+    <div class="filter-box">
+      <label>Max Price: <span id="priceValue">500</span>$</label>
+      <input type="range" id="priceRange" min="1" max="500" value="500">
+    </div>
+
+    <div class="filter-box">
+      <label>Categories</label>
+      <div class="category-list" id="categoryList"></div>
+    </div>
+  </aside>
+
+  <!-- PRODUCT GRID -->
+  <section class="product-grid" id="productGrid">
+    <p>Loading products...</p>
+  </section>
+
+</div>
+
+<!-- ADD TO CART MODAL -->
+<div id="addedModal">
+  <div class="added-box">
+    <div class="big-check">Checkmark</div>
+    <h3>Added to Cart!</h3>
+    <button class="continue-btn" onclick="closeAddedModal()">Continue Shopping</button>
+    <button class="cart-btn-go" onclick="window.location='/cart'">Go to Cart</button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+
+<script>
+let products = [];
+let selectedCategories = new Set();
+
+async function loadProducts() {
+  const res = await fetch("/api/products");
+  products = await res.json();
+  renderCategories();
+  renderProducts(products);
+}
+
+function renderCategories() {
+  const catList = document.getElementById("categoryList");
+  let cats = [...new Set(products.map(p => p.category_name).filter(Boolean))];
+
+  catList.innerHTML = cats.map(c => `
+    <label><input type="checkbox" value="${c}" onchange="toggleCategory('${c}')"> ${c}</label>
+  `).join("");
+}
+
+function toggleCategory(cat) {
+  if (selectedCategories.has(cat)) selectedCategories.delete(cat);
+  else selectedCategories.add(cat);
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const maxPrice = document.getElementById("priceRange").value;
+
+  const filtered = products.filter(p => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search) ||
+      (p.category_name || "").toLowerCase().includes(search);
+
+    const matchesCategory =
+      selectedCategories.size === 0 || selectedCategories.has(p.category_name);
+
+    return matchesSearch && matchesCategory && p.price <= maxPrice;
+  });
+
+  renderProducts(filtered);
+}
+
+function renderProducts(list) {
+  const grid = document.getElementById("productGrid");
+
+  if (!list.length) {
+    grid.innerHTML = `<p>No products found.</p>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(p => {
+    const imgSrc = p.image ? `/static/images/${p.image}` : '/static/no-image.png';
+    const safeName = p.name.replace(/'/g, "\\'");
+    const safeImg = p.image ? p.image.replace(/'/g, "\\'") : '';
+
+    return `
+      <div class="product-card">
+        <img src="${imgSrc}" 
+             onerror="this.src='/static/no-image.png'" 
+             alt="${safeName}">
+        <h3>${p.name}</h3>
+        <p class="price">$${Number(p.price).toFixed(2)}</p>
+        <button class="add-btn" 
+                onclick="addToCart(${p.id}, '${safeName}', ${p.price}, '${safeImg}')">
+          Add to Cart
+        </button>
+      </div>
+    `;
+  }).join("");
+}
+
+function addToCart(id, name, price, img) {
+  const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  const existing = cart.find(i => i.id === id);
+
+  if (existing) existing.quantity++;
+  else cart.push({ id, name, price, image: img, quantity: 1 });
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+
+  updateCartCount();
+  showAddedModal();
+}
+
+function showAddedModal() {
+  document.getElementById("addedModal").style.display = "flex";
+}
+
+function closeAddedModal() {
+  document.getElementById("addedModal").style.display = "none";
+}
+
+document.getElementById("searchInput").oninput = applyFilters;
+document.getElementById("priceRange").oninput = () => {
+  document.getElementById("priceValue").textContent = document.getElementById("priceRange").value;
+  applyFilters();
+};
+
+// Initialize
+loadProducts();
+</script>
+
+{% endblock %}

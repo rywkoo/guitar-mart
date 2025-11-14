@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% block title %}Admin Users{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <h2 class="mb-4">Users</h2>
+  <p class="text-muted">Manage all users in the system.</p>
+
+  <div id="usersContainer" class="row g-3">
+    <!-- Users will be injected here -->
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function loadUsers() {
+    try {
+      // NO JWT NEEDED — admin lock is OFF
+      const res = await fetch("/admin/users");
+      const users = await res.json();
+
+      const container = document.getElementById("usersContainer");
+      container.innerHTML = ""; // Clear
+
+      if (!Array.isArray(users) || users.length === 0) {
+        container.innerHTML = "<p class='text-center text-muted'>No users found</p>";
+        return;
+      }
+
+      users.forEach(user => {
+        const card = `
+          <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="card-title">${user.username}</h5>
+                <p class="card-text">
+                  <strong>Email:</strong> ${user.email}<br>
+                  <strong>Role:</strong> <span class="badge bg-${user.role === 'admin' ? 'danger' : 'secondary'}">${user.role}</span><br>
+                  <strong>Status:</strong> <span class="badge bg-${user.is_active ? 'success' : 'warning'}">${user.is_active ? 'Active' : 'Inactive'}</span>
+                </p>
+                <button class="btn btn-sm btn-outline-primary me-2" onclick="editUser(${user.id})">Edit</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${user.id})">Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.innerHTML += card;
+      });
+    } catch (err) {
+      console.error(err);
+      document.getElementById("usersContainer").innerHTML = "<p class='text-danger'>Failed to load users</p>";
+    }
+  }
+
+  // Delete user (placeholder — API still protected)
+  async function deleteUser(id) {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    alert("Delete API requires JWT — re-enable admin lock to use");
+  }
+
+  // Edit user (placeholder)
+  function editUser(id) {
+    alert("Edit will work when admin lock is re-enabled");
+  }
+
+  // Load on open
+  loadUsers();
+</script>
+{% endblock %}

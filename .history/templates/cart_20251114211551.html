@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Shopping Cart - Mini Mart{% endblock %}
+
+{% block content %}
+
+<style>
+  /* Match shop.html page spacing for navbar height */
+  .page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 7rem 1rem 2rem; /* PUSH PAGE DOWN so navbar never overlaps */
+  }
+
+  /* Cleaner item styling (matching Shop cards) */
+  .cart-item {
+    display:flex;
+    gap:1rem;
+    background:#fff;
+    padding:1rem;
+    border-radius:12px;
+    box-shadow:0 3px 12px rgba(0,0,0,.08);
+    margin-bottom:1.5rem;
+    align-items:center;
+  }
+
+  .cart-img {
+    width:120px;
+    height:120px;
+    object-fit:cover;
+    border-radius:12px;
+  }
+
+  .cart-remove-btn {
+    background:#ff4757;
+    color:white;
+    border:none;
+    padding:.6rem 1rem;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:700;
+    transition:.2s;
+  }
+
+  .cart-remove-btn:hover {
+    background:#e84148;
+  }
+
+  .summary-box {
+    background:#fff;
+    padding:2rem;
+    border-radius:12px;
+    box-shadow:0 3px 12px rgba(0,0,0,.08);
+    height:max-content;
+  }
+</style>
+
+<div class="page-container">
+
+  <h1 style="font-size:2rem; font-weight:700; margin-bottom:2rem; text-align:center;">
+    Your Cart
+  </h1>
+
+  <div id="cartContainer" style="display:flex; flex-wrap:wrap; gap:2rem;">
+
+    <!-- CART ITEMS -->
+    <div id="cartItems" style="flex:2; min-width:300px;"></div>
+
+    <!-- SUMMARY -->
+    <div id="cartSummary" class="summary-box" style="flex:1; min-width:280px; display:none;">
+      <h2 style="font-size:1.25rem; font-weight:700; margin-bottom:1.5rem;">Order Summary</h2>
+
+      <div id="summaryLines"></div>
+
+      <div style="display:flex; justify-content:space-between; font-weight:700; font-size:1.1rem; margin:1rem 0 2rem;">
+        <span>Total</span>
+        <span id="totalPrice">$0.00</span>
+      </div>
+
+      <button id="checkoutBtn"
+        style="width:100%; background:#4f46e5; color:white; border:none; padding:0.75rem; font-size:1rem; font-weight:700; border-radius:12px; cursor:pointer; transition:.2s;">
+        Proceed to Checkout
+      </button>
+    </div>
+
+  </div>
+
+  <div id="emptyCart" style="text-align:center; padding:3rem; color:#888; display:none;">
+    <p>Your cart is empty.  
+      <a href="/shop" style="color:var(--color-primary);">Continue shopping</a>
+    </p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ------------ CART HELPERS ------------ */
+function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
+
+function saveCart(c) {
+  localStorage.setItem('cart', JSON.stringify(c));
+  window.updateCartCount();
+  renderCart();
+}
+
+function removeFromCart(id) {
+  showModal('Remove this item from the cart?', () => {
+    const cart = getCart().filter(i => i.id !== id);
+    saveCart(cart);
+  });
+}
+
+function changeQty(id, qty) {
+  if (qty < 1) return;
+  const cart = getCart();
+  const item = cart.find(i => i.id === id);
+  if (item) {
+    item.quantity = qty;
+    saveCart(cart);
+  }
+}
+
+/* ------------ RENDER CART ------------ */
+function renderCart() {
+  const cart = getCart();
+  const itemsDiv = document.getElementById('cartItems');
+  const sumDiv = document.getElementById('cartSummary');
+  const emptyDiv = document.getElementById('emptyCart');
+
+  if (!cart.length) {
+    itemsDiv.innerHTML = '';
+    sumDiv.style.display = 'none';
+    emptyDiv.style.display = 'block';
+    return;
+  }
+
+  emptyDiv.style.display = 'none';
+  sumDiv.style.display = 'block';
+  itemsDiv.innerHTML = '';
+
+  let subtotal = 0;
+
+  cart.forEach(it => {
+    const line = it.price * it.quantity;
+    subtotal += line;
+
+    const img = it.image ? `/static/images/${it.image}` : '/static/no-image.png';
+
+    itemsDiv.innerHTML += `
+      <div class="cart-item">
+        <img src="${img}" class="cart-img">
+
+        <div style="flex:1;">
+          <h3 style="margin:0 0 .5rem;font-size:1.1rem;font-weight:600;">${it.name}</h3>
+          <p style="margin:0;color:#555;">Category: ${it.category_name || '—'}</p>
+          <p style="margin:.5rem 0 0;font-weight:600;">$${it.price.toFixed(2)}</p>
+
+          <div style="margin-top:.5rem;display:flex;gap:.5rem;align-items:center;">
+            <label style="font-size:.9rem;color:#555;">Qty:</label>
+            <input 
+              type="number" min="1" value="${it.quantity}" data-id="${it.id}"
+              style="width:60px;padding:.3rem;border:1px solid #ccc;border-radius:8px;">
+          </div>
+        </div>
+
+        <button class="cart-remove-btn" onclick="removeFromCart(${it.id})">
+          Remove
+        </button>
+      </div>
+    `;
+  });
+
+  const tax = subtotal * 0.05;
+  const total = subtotal + tax;
+
+  document.getElementById('summaryLines').innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+      <span>Subtotal</span><span>$${subtotal.toFixed(2)}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+      <span>Tax (5%)</span><span>$${tax.toFixed(2)}</span>
+    </div>
+  `;
+
+  document.getElementById('totalPrice').textContent = `$${total.toFixed(2)}`;
+}
+
+/* ------------ EVENT HANDLERS ------------ */
+document.getElementById('cartItems').addEventListener('change', e => {
+  if (e.target.matches('input[type="number"]')) {
+    changeQty(Number(e.target.dataset.id), Number(e.target.value));
+  }
+});
+
+document.getElementById('checkoutBtn')?.addEventListener('click', () => {
+  showModal("Checkout is not implemented yet.", null);
+});
+
+/* ------------ INIT ------------ */
+document.addEventListener('DOMContentLoaded', () => {
+  renderCart();
+  window.updateCartCount();
+});
+</script>
+{% endblock %}

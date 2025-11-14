@@ -1,0 +1,274 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Categories{% endblock %}
+
+{% block content %}
+<h1 style="font-size:2rem;font-weight:700;color:#1d1d1f;margin-bottom:1.5rem;">Categories</h1>
+
+<button id="addCategoryBtn" style="
+    background:#4f46e5;color:#fff;font-weight:700;
+    padding:.5rem 1.25rem;border:none;border-radius:12px;
+    cursor:pointer;margin-bottom:1rem;transition:all .2s;">
+    Add Category
+</button>
+
+<!-- Search Bar -->
+<div style="margin-bottom:1rem;">
+  <input type="text" id="categorySearch" placeholder="Search categories by name..." 
+         style="width:100%;max-width:400px;padding:.5rem 1rem;border:1px solid #ced4da;border-radius:8px;font-size:0.9rem;">
+</div>
+
+<table style="width:100%;border-collapse:collapse;text-align:left;
+             box-shadow:0 4px 10px rgba(0,0,0,.05);border-radius:8px;overflow:hidden;">
+  <thead>
+    <tr style="background:#f8f9fa;">
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">ID</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Name</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Description</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Products</th>
+      <th style="padding:12px 15px;border-bottom:2px solid #e9ecef;">Actions</th>
+    </tr>
+  </thead>
+  <tbody id="categoryTableBody">
+    {% for cat in categories %}
+    <tr data-id="{{ cat.id }}" style="border-bottom:1px solid #e9ecef;vertical-align:middle;">
+      <td style="padding:10px;">{{ cat.id }}</td>
+      <td style="padding:10px;">{{ cat.name }}</td>
+      <td style="padding:10px;font-size:0.9rem;color:#555;">
+        {{ cat.description|truncate(80) if cat.description else '—' }}
+      </td>
+      <td style="padding:10px;">
+        <span class="badge" style="background:#e0f2fe;color:#0c4a6e;padding:.25rem .5rem;border-radius:6px;font-size:0.85rem;">
+          {{ cat.products|length }}
+        </span>
+      </td>
+      <td style="padding:10px;">
+        <button class="edit-btn" onclick="openEditModal({{ cat.id }})"
+                style="margin-right:5px;background:#4f46e5;color:#fff;
+                       padding:.35rem .75rem;border:none;border-radius:8px;
+                       cursor:pointer;transition:all .2s;font-size:0.85rem;">Edit</button>
+        <button class="delete-btn" 
+                onclick="openDeleteModal({{ cat.id }}, {{ cat.name|tojson }})"
+                style="background:#ff4757;color:#fff;padding:.35rem .75rem;
+                       border:none;border-radius:8px;cursor:pointer;transition:all .2s;font-size:0.85rem;">
+          Delete
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- ========== ADD CATEGORY MODAL ========== -->
+<div id="addCategoryModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:999;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:500px;">
+    <span id="closeAddModal" style="float:right;font-size:1.5rem;cursor:pointer;color:#6c757d;">×</span>
+    <h2 style="margin-top:0;color:#1d1d1f;">Add New Category</h2>
+    <form id="addCategoryForm">
+      <label style="display:block;margin-bottom:.5rem;font-weight:600;">Name <span style="color:red;">*</span></label>
+      <input type="text" name="name" required style="width:100%;padding:.5rem;margin-bottom:1rem;border:1px solid #ced4da;border-radius:6px;">
+
+      <label style="display:block;margin-bottom:.5rem;font-weight:600;">Description</label>
+      <textarea name="description" rows="3" style="width:100%;padding:.5rem;margin-bottom:1rem;border:1px solid #ced4da;border-radius:6px;resize:vertical;"></textarea>
+
+      <button type="submit" style="background:#4f46e5;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Save Category
+      </button>
+    </form>
+    <div id="addResponse" style="margin-top:1rem;min-height:1.5rem;font-size:0.9rem;"></div>
+  </div>
+</div>
+
+<!-- ========== EDIT CATEGORY MODAL ========== -->
+<div id="editCategoryModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.4);align-items:center;justify-content:center;z-index:999;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:500px;">
+    <span id="closeEditModal" style="float:right;font-size:1.5rem;cursor:pointer;color:#6c757d;">×</span>
+    <h2 style="margin-top:0;color:#1d1d1f;">Edit Category</h2>
+    <form id="editCategoryForm">
+      <input type="hidden" name="category_id" id="editCategoryId">
+
+      <label style="display:block;margin-bottom:.5rem;font-weight:600;">Name <span style="color:red;">*</span></label>
+      <input type="text" id="editName" name="name" required style="width:100%;padding:.5rem;margin-bottom:1rem;border:1px solid #ced4da;border-radius:6px;">
+
+      <label style="display:block;margin-bottom:.5rem;font-weight:600;">Description</label>
+      <textarea id="editDescription" name="description" rows="3" style="width:100%;padding:.5rem;margin-bottom:1rem;border:1px solid #ced4da;border-radius:6px;resize:vertical;"></textarea>
+
+      <button type="submit" style="background:#4f46e5;color:#fff;padding:.6rem 1.2rem;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Update Category
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ========== DELETE CONFIRM MODAL ========== -->
+<div id="deleteConfirmModal" class="modal"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:1000;">
+  <div style="background:#fff;padding:2rem;border-radius:12px;width:90%;max-width:420px;text-align:center;">
+    <h3 style="margin:0 0 1rem;font-size:1.25rem;color:#1d1d1f;">Delete Category</h3>
+    <p style="margin:0 0 1.5rem;color:#555;font-size:0.95rem;">
+      Are you sure you want to delete <strong id="deleteCategoryName"></strong>?<br>
+      This will <strong>not delete</strong> products, but they will lose their category.
+    </p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;">
+      <button id="cancelDeleteBtn"
+              style="background:#e9ecef;color:#1d1d1f;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Cancel
+      </button>
+      <button id="confirmDeleteBtn"
+              style="background:#ff4757;color:#fff;padding:.6rem 1.2rem;
+                     border:none;border-radius:8px;cursor:pointer;font-weight:600;">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ---------- MODAL ELEMENTS ---------- */
+const addModal = document.getElementById('addCategoryModal');
+const editModal = document.getElementById('editCategoryModal');
+const deleteModal = document.getElementById('deleteConfirmModal');
+const closeAdd = document.getElementById('closeAddModal');
+const closeEdit = document.getElementById('closeEditModal');
+
+/* ---------- OPEN ADD MODAL ---------- */
+document.getElementById('addCategoryBtn').onclick = () => {
+  addModal.style.display = 'flex';
+  document.getElementById('addResponse').innerHTML = '';
+  document.getElementById('addCategoryForm').reset();
+};
+
+/* ---------- CLOSE MODALS ---------- */
+closeAdd.onclick = () => addModal.style.display = 'none';
+closeEdit.onclick = () => editModal.style.display = 'none';
+
+window.onclick = e => {
+  if (e.target === addModal) addModal.style.display = 'none';
+  if (e.target === editModal) editModal.style.display = 'none';
+  if (e.target === deleteModal) deleteModal.style.display = 'none';
+};
+
+/* ---------- SEARCH ---------- */
+document.getElementById('categorySearch').addEventListener('input', function() {
+  const query = this.value.toLowerCase();
+  const rows = document.querySelectorAll('#categoryTableBody tr');
+  rows.forEach(row => {
+    const name = row.children[1].textContent.toLowerCase();
+    row.style.display = name.includes(query) ? '' : 'none';
+  });
+});
+
+/* ---------- OPEN EDIT MODAL ---------- */
+async function openEditModal(id) {
+  const token = localStorage.getItem('jwtToken');
+  if (!token) return alert('Please log in again');
+
+  try {
+    const res = await fetch(`/admin/api/categories/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load category');
+    const data = await res.json();
+
+    document.getElementById('editCategoryId').value = data.id;
+    document.getElementById('editName').value = data.name;
+    document.getElementById('editDescription').value = data.description || '';
+
+    editModal.style.display = 'flex';
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------- ADD CATEGORY ---------- */
+document.getElementById('addCategoryForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const token = localStorage.getItem('jwtToken');
+  if (!token) return alert('JWT missing');
+
+  const res = await fetch('/admin/api/categories/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const json = await res.json();
+
+  const resp = document.getElementById('addResponse');
+  resp.innerHTML = res.ok
+    ? '<span style="color:green">Category added! Reloading...</span>'
+    : `<span style="color:red">${json.error || 'Failed'}</span>`;
+
+  if (res.ok) setTimeout(() => location.reload(), 1200);
+});
+
+/* ---------- EDIT CATEGORY ---------- */
+document.getElementById('editCategoryForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const id = formData.get('category_id');
+  const token = localStorage.getItem('jwtToken');
+  if (!token) return alert('JWT missing');
+
+  const res = await fetch(`/admin/api/categories/${id}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const json = await res.json();
+
+  if (res.ok) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (row) {
+      row.children[1].textContent = json.category.name;
+      row.children[2].textContent = json.category.description ? json.category305.description.substring(0, 80) + '...' : '—';
+    }
+    editModal.style.display = 'none';
+  } else {
+    alert(json.error || 'Update failed');
+  }
+});
+
+/* ---------- DELETE CATEGORY ---------- */
+let categoryToDelete = null;
+
+function openDeleteModal(id, name) {
+  categoryToDelete = id;
+  document.getElementById('deleteCategoryName').textContent = name;
+  deleteModal.style.display = 'flex';
+}
+
+document.getElementById('cancelDeleteBtn').onclick = () => {
+  deleteModal.style.display = 'none';
+  categoryToDelete = null;
+};
+
+document.getElementById('confirmDeleteBtn').onclick = async () => {
+  if (!categoryToDelete) return;
+  const token = localStorage.getItem('jwtToken');
+  if (!token) return alert('JWT missing');
+
+  const res = await fetch(`/admin/api/categories/${categoryToDelete}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const json = await res.json();
+
+  if (res.ok) {
+    document.querySelector(`tr[data-id="${categoryToDelete}"]`)?.remove();
+    deleteModal.style.display = 'none';
+  } else {
+    alert(json.error || 'Failed to delete');
+  }
+  categoryToDelete = null;
+};
+</script>
+{% endblock %}

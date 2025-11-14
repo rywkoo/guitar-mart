@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Mini Mart</title>
+  <style>
+    body { font-family: Arial; background:#f8f9fa; display:flex; justify-content:center; align-items:center; height:100vh; }
+    .login-container { background:#fff; padding:40px; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.1); width:350px; }
+    h2 { text-align:center; margin-bottom:20px; color:#333; }
+    input { width:100%; padding:12px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+    button { width:100%; padding:12px; background:#007bff; color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:16px; margin-top:10px; }
+    button:hover { background:#0056b3; }
+    .message { margin-top:15px; text-align:center; font-weight:bold; }
+    .register-link { text-align:center; margin-top:15px; font-size:14px; }
+    .register-link a { color:#007bff; text-decoration:none; }
+    .register-link a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="text" name="username" placeholder="Username" required />
+      <input type="password" name="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+      <div class="message" id="message"></div>
+    </form>
+    <div class="register-link">
+      Don't have an account? <a href="register.html">Register here</a>
+    </div>
+  </div>
+
+<script>
+const form = document.getElementById('loginForm');
+const messageDiv = document.getElementById('message');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  messageDiv.textContent = '';
+  messageDiv.style.color = 'red';
+
+  const formData = new FormData(form);
+  const data = {
+    username: formData.get('username'),
+    password: formData.get('password')
+  };
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      // Save JWT token and role
+      localStorage.setItem("jwtToken", result.access_token);
+      localStorage.setItem("username", result.username);
+      localStorage.setItem("role", result.role);
+
+      messageDiv.style.color = 'green';
+      messageDiv.textContent = 'Login successful! Redirecting...';
+      setTimeout(() => {
+        if(result.role === "admin"){
+          window.location.href = "/admin"; // redirect admin to admin page
+        } else {
+          window.location.href = "/"; // normal user to home
+        }
+      }, 1500);
+    } else {
+      messageDiv.textContent = result.error || JSON.stringify(result);
+    }
+  } catch (err) {
+    messageDiv.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+
+
+</body>
+</html>
