@@ -18,6 +18,6 @@ class Config:
     MAIL_SERVER = 'smtp.gmail.com'   # e.g., Gmail SMTP
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USERNAME = 'theareachmiku@gmail.com'
-    MAIL_PASSWORD = 'qwtfywcuwcybzydd'  # Use Gmail App Password
-    MAIL_DEFAULT_SENDER = 'mini-mart@mail.su79.setec'
+    MAIL_USERNAME = '{EMAIL}'
+    MAIL_PASSWORD = '{APP_PASSWORD}'  # Use Gmail App Password
+    MAIL_DEFAULT_SENDER = '{EMAIL_SENDER}'
