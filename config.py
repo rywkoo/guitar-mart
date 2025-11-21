@@ -18,6 +18,6 @@ class Config:
     MAIL_SERVER = 'smtp.gmail.com'   # e.g., Gmail SMTP
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USERNAME = '{EMAIL}'
+    MAIL_USERNAME = '{EMAIL}' # Use a legit gmail
     MAIL_PASSWORD = '{APP_PASSWORD}'  # Use Gmail App Password
-    MAIL_DEFAULT_SENDER = '{EMAIL_SENDER}'
+    MAIL_DEFAULT_SENDER = '{EMAIL_SENDER}' # Use a legit sender
